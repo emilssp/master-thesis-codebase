@@ -376,7 +376,7 @@ class Hamiltonian:
         else:
             self.gap[i] = gap
 
-    def diagonalize(self, drop_matrix=True):
+    def diagonalize(self, drop_matrix=False):
         if self.matrix is None:
             raise RuntimeError("Hamiltonian matrix not built yet. "
                                "Call build() first.")
@@ -386,7 +386,7 @@ class Hamiltonian:
             self.matrix = None
         return eigenvalues, eigenvectors
 
-    def dos(self, energies, eta, idx=None, drop_matrix=True):
+    def dos(self, energies, eta, idx=None, drop_matrix=False):
         evals, evecs = self.diagonalize(drop_matrix=drop_matrix)
         dos_values = cp.zeros_like(energies)
 
@@ -427,7 +427,7 @@ class Hamiltonian:
 
         return dos_values / energies.size
 
-    def ldos(self, energies, lattice, eta):
+    def ldos(self, energies, eta):
         X = self.lattice.X
         Y = self.lattice.Y
         N = X * Y
@@ -453,39 +453,7 @@ class Hamiltonian:
 
         return np_total_dos, np_ldos_edge, np_ldos_bulk
 
-    
-    def ldos_pr_energy(self, energy, eta, drop_matrix=True):
-        evals, evecs = self.diagonalize(drop_matrix=drop_matrix)
-        dos_values = cp.zeros(self.lattice.num_sites)
-
-        N = self.lattice.num_sites
-        M = evals.size  # should be 4*N
-        for k in range(M):
-            E = evals[k]
-            if E < 0:
-                continue
-
-            col = evecs[:, k]
-
-            # (4N,) -> (N,4)
-            col_site = col.reshape(N, 4)
-            u_up = col_site[:, 0]
-            u_dn = col_site[:, 1]
-            v_up = col_site[:, 2]
-            v_dn = col_site[:, 3]
-
-            w_pos = cp.abs(u_up)**2 + cp.abs(u_dn)**2
-            w_neg = cp.abs(v_up)**2 + cp.abs(v_dn)**2
-
-            dos_values += w_pos * lorentzian(energy - E, eta=eta)
-            dos_values += w_neg * lorentzian(energy + E, eta=eta)
-
-        del evecs, evals
-        cp.get_default_memory_pool().free_all_blocks()
-
-        return dos_values / self.lattice.num_sites
-    
-    def free_energy(self, temperature=0, drop_matrix=True):
+    def free_energy(self, temperature=0, drop_matrix=False):
         if self.matrix is None:
             raise RuntimeError("Hamiltonian matrix not built yet. "
                                "Call build() first.")
@@ -505,7 +473,7 @@ class Hamiltonian:
 
         return F
     
-    def dos_per_spin(self, energies, eta, idx=None):
+    def ldos_per_spin(self, energies, eta, idx=None):
         evals, evecs = self.diagonalize(drop_matrix=False)
         dos_up_values = cp.zeros_like(energies)
         dos_dn_values = cp.zeros_like(energies)
