@@ -298,7 +298,6 @@ class TriangularLattice:
             plt.savefig(path, bbox_inches='tight', dpi=150)
         return fig, ax
 
-
 class Lattice:
     """
     Unified lattice wrapper.
