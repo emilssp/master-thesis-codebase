@@ -22,7 +22,6 @@ class SquareLattice:
         self.edges = []
 
         edges_ij = []
-        edges_ji = []
         for y in range(Y):
             for x in range(X):
                 i = y * X + x  # flat index for (x,y)
@@ -51,7 +50,8 @@ class SquareLattice:
                     # wrap to (x, Y-1)
                     j = (Y - 1) * X + x
                     edges_ij.append((i, j))
-        self.edges = edges_ij + edges_ji
+        self.edges = edges_ij
+        
 
     def get_coords(self, i):
         y = i // self.X
@@ -61,7 +61,7 @@ class SquareLattice:
     def get_disp(self, i, j):
         ri = self.get_coords(i)  # [xi, yi]
         rj = self.get_coords(j)  # [xj, yj]
-        dr = cp.subtract(rj, ri) # [dx, dy]
+        dr = cp.subtract(rj, ri) * cp.array([1,-1]) # [dx, dy]
 
         Lx, Ly = self.X, self.Y
         if self.pbc_x:
@@ -78,6 +78,18 @@ class SquareLattice:
 
         return dr
     
+    def get_dir(self, i, j):
+        dr = self.get_disp(i, j)
+        dist = cp.linalg.norm(dr)
+        if dr[0] == 1 and dr[1] == 0:
+            return "+x"
+        elif dr[0] == -1 and dr[1] == 0:
+            return "-x"
+        elif dr[0] == 0 and dr[1] == 1:
+            return "+y"
+        elif dr[0] == 0 and dr[1] == -1:
+            return "-y"
+        
     def get_edge_and_bulk_indices(X, Y):
         edge_indices = []
         bulk_indices = []
@@ -353,20 +365,20 @@ def unconventional_gap(disp, gap_p=cp.zeros(2), gap_p_uu=cp.zeros(2),
     dx = 0.5 * (cp.dot(disp, gap_p_uu) - cp.dot(disp, gap_p_dd))
     dy = -0.5j * (cp.dot(disp, gap_p_uu) + cp.dot(disp, gap_p_dd))
 
-    gap_d = cp.array([gap_d,-gap_d])
+    gap_d = cp.array([gap_d, -gap_d])
     psi = gap_s + cp.dot(cp.abs(disp), gap_d)
 
-    return cp.dot(1j*s2, (psi * s0 + dx * s1 + dy*s2 + dz*s3 )) 
-    
+    return cp.dot(1j*s2, (psi * s0 + dx * s1 + dy * s2 + dz * s3 )) 
+
 
 class Hamiltonian:
     def __init__(self, lattice):
         self.lattice = lattice
         N = lattice.num_sites
         self.matrix = cp.zeros((4*N, 4*N),dtype=cp.complex128)
-        self.gap = cp.zeros(N, dtype=cp.complex128)  # gap at each site
+        self.gap = cp.zeros(N, dtype=cp.complex128)
         self.gap_d = cp.zeros(N, dtype=cp.complex128)
-        self.gap_s = cp.zeros(N, dtype=cp.complex128) 
+        self.gap_s = cp.zeros(N, dtype=cp.complex128)
         self.gap_px = cp.zeros(N, dtype=cp.complex128)
         self.gap_py = cp.zeros(N, dtype=cp.complex128)
         self.gap_px_uu = cp.zeros(N, dtype=cp.complex128)
@@ -486,7 +498,7 @@ class Hamiltonian:
         F = U - temperature * S
 
         return F
-    
+
     def ldos_per_spin(self, energies, eta, idx=None):
         evals, evecs = self.diagonalize(drop_matrix=False)
         dos_up_values = cp.zeros_like(energies)
@@ -521,7 +533,7 @@ class Hamiltonian:
             dos_dn_values += cp.sum(cp.abs(u_dn)**2) * lorentzian(energies - E, eta=eta)
             dos_dn_values += cp.sum(cp.abs(v_dn)**2) * lorentzian(energies + E, eta=eta)
         return dos_up_values / energies.size, dos_dn_values / energies.size
-    
+
     def get_corr(self, T):
         gap = self.gap
         eigval, eigvec = self.diagonalize(drop_matrix=False)
@@ -538,6 +550,7 @@ class Hamiltonian:
             corr += (u_n[:, 1] * cp.conj(v_n[:, 0]) * f_En +
                     u_n[:, 0] * cp.conj(v_n[:, 1]) * (1 - f_En))
         return corr
+
 
 def rotate120(loc, X):
     L = X - 1
