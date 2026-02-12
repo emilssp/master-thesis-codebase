@@ -1,6 +1,6 @@
 # flake8: noqa: E501
 
-import cupy as cp
+import cupy as cp # type: ignore
 import numpy as np
 from .constants import *
 import matplotlib.pyplot as plt
@@ -61,7 +61,7 @@ class SquareLattice:
     def get_disp(self, i, j):
         ri = self.get_coords(i)  # [xi, yi]
         rj = self.get_coords(j)  # [xj, yj]
-        dr = cp.subtract(rj, ri) * cp.array([1,-1]) # [dx, dy]
+        dr = cp.subtract(rj, ri) # [dx, dy]
 
         Lx, Ly = self.X, self.Y
         if self.pbc_x:
@@ -80,7 +80,6 @@ class SquareLattice:
     
     def get_dir(self, i, j):
         dr = self.get_disp(i, j)
-        dist = cp.linalg.norm(dr)
         if dr[0] == 1 and dr[1] == 0:
             return "+x"
         elif dr[0] == -1 and dr[1] == 0:
@@ -479,13 +478,18 @@ class Hamiltonian:
             ldos_bulk = self.dos(energies,eta=eta,idx=bulk_idx,drop_matrix=False)
             return total_dos, ldos_edge, ldos_bulk
 
-    def free_energy(self, temperature=0, drop_matrix=False):
+    def free_energy(self, U, V, V_prime, temperature=0, drop_matrix=False):
         if self.matrix is None:
             raise RuntimeError("Hamiltonian matrix not built yet. "
                                "Call build() first.")
         eps = cp.linalg.eigvalsh(self.matrix)
         eps = eps[eps > 0]
-        
+        E_S = 0
+        F0, F, Fuu, Fdd = self.correlators(temperature)
+        E_S -= U * cp.sum(cp.abs(F0)**2)
+        E_S -= V * cp.sum(cp.abs(F)**2)
+        E_S -= 0.5 * V_prime * cp.sum(cp.abs(Fuu)**2 + cp.abs(Fdd)**2)
+
         if drop_matrix:
             self.matrix = None
 
@@ -495,7 +499,7 @@ class Hamiltonian:
         elif temperature > 0:
             S = cp.sum(cp.log(1 + cp.exp(-eps / temperature)))
 
-        F = U - temperature * S
+        F = U + E_S - temperature * S
 
         return F
 
@@ -534,22 +538,62 @@ class Hamiltonian:
             dos_dn_values += cp.sum(cp.abs(v_dn)**2) * lorentzian(energies + E, eta=eta)
         return dos_up_values / energies.size, dos_dn_values / energies.size
 
-    def get_corr(self, T):
-        gap = self.gap
+    def correlators(self, T):
+        N = self.lattice.num_sites
+        F0 = cp.zeros_like(self.gap)
+        F = cp.zeros((N,N), dtype=cp.complex128)
+        Fuu = cp.zeros((N,N), dtype=cp.complex128)
+        Fdd = cp.zeros((N,N), dtype=cp.complex128)
+
         eigval, eigvec = self.diagonalize(drop_matrix=False)
         eigvec = eigvec[:, eigval >= 0]
         eigval = eigval[eigval >= 0]
         eigvec = eigvec.T.reshape((eigval.size, -1, 4))
-        corr = cp.zeros_like(gap)
-        for n in range(eigval.size):
-            En = eigval[n]
-            u_n = eigvec[n, :, 0:2]  # u spinors
-            v_n = eigvec[n, :, 2:4]  # v spinors
-            f_En = fermi_dirac(En, T)
 
-            corr += (u_n[:, 1] * cp.conj(v_n[:, 0]) * f_En +
-                    u_n[:, 0] * cp.conj(v_n[:, 1]) * (1 - f_En))
-        return corr
+        f = fermi_dirac(eigval, T)          # (Neig,)
+        u_up = eigvec[:, :, 0] #u             # (Neig, Nsites)
+        u_dn = eigvec[:, :, 1] #v
+        v_up = eigvec[:, :, 2] #w
+        v_dn = eigvec[:, :, 3] #x
+
+        F0 = (
+            cp.einsum('ni,ni,n->i', u_dn, cp.conj(v_up), f) +
+            cp.einsum('ni,ni,n->i', u_up, cp.conj(v_dn), (1-f))
+        )
+        
+        for i,j in self.lattice.edges:
+
+            # Eqn 1: F_{ij,↑↓}^d
+            F[i][j] = (
+                cp.einsum('n,n,n->', u_up[:,i], cp.conj(v_dn[:,j]), (1 - f)) +
+                cp.einsum('n,n,n->', cp.conj(v_up[:,i]), u_dn[:,j], f)
+            )        
+            # Eqn 1: F_{ji,↑↓}^d
+            F[j][i] = (
+                cp.einsum('n,n,n->', u_up[:,j], cp.conj(v_dn[:,i]), (1 - f)) +
+                cp.einsum('n,n,n->', cp.conj(v_up[:,j]), u_dn[:,i], f)
+            )
+            # Eqn 2: F_{ij,↑↑}^d
+            Fuu[i][j] = (
+                cp.einsum('n,n,n->', u_up[:,i], cp.conj(v_up[:,j]), (1 - f)) +
+                cp.einsum('n,n,n->', cp.conj(v_up[:,i]), u_up[:,j], f)
+            )
+            # Eqn 2: F_{ji,↑↑}^d
+            Fuu[j][i] = (
+                cp.einsum('n,n,n->', u_up[:,j], cp.conj(v_up[:,i]), (1 - f)) +
+                cp.einsum('n,n,n->', cp.conj(v_up[:,j]), u_up[:,i], f)
+            )
+            # Eqn 3: F_{ij,↓↓}^d
+            Fdd[i][j] = (
+                cp.einsum('n,n,n->', u_dn[:,i], cp.conj(v_dn[:,j]), (1 - f)) +
+                cp.einsum('n,n,n->', cp.conj(v_dn[:,j]), u_dn[:,i], f)
+            )
+            # Eqn 3: F_{ji,↓↓}^d
+            Fdd[j][i] = (
+                cp.einsum('n,n,n->', u_dn[:,j], cp.conj(v_dn[:,i]), (1 - f)) +
+                cp.einsum('n,n,n->', cp.conj(v_dn[:,i]), u_dn[:,j], f)
+            )
+        return F0, F, Fuu, Fdd
 
 
 def rotate120(loc, X):
