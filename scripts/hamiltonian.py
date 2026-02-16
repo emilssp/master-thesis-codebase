@@ -374,16 +374,28 @@ class Hamiltonian:
     def __init__(self, lattice):
         self.lattice = lattice
         N = lattice.num_sites
+
         self.matrix = cp.zeros((4*N, 4*N),dtype=cp.complex128)
         self.gap = cp.zeros(N, dtype=cp.complex128)
-        self.gap_d = cp.zeros(N, dtype=cp.complex128)
-        self.gap_s = cp.zeros(N, dtype=cp.complex128)
-        self.gap_px = cp.zeros(N, dtype=cp.complex128)
-        self.gap_py = cp.zeros(N, dtype=cp.complex128)
-        self.gap_px_uu = cp.zeros(N, dtype=cp.complex128)
-        self.gap_py_uu = cp.zeros(N, dtype=cp.complex128)
-        self.gap_px_dd = cp.zeros(N, dtype=cp.complex128)
-        self.gap_py_dd = cp.zeros(N, dtype=cp.complex128)
+        self.F0 = cp.zeros(N, dtype=cp.complex128)
+        self.F = cp.zeros((N, N), dtype=cp.complex128)
+        self.Fuu = cp.zeros((N, N), dtype=cp.complex128)
+        self.Fdd = cp.zeros((N, N), dtype=cp.complex128)
+
+    def get_correlations(self):
+        return self.F0, self.F, self.Fuu, self.Fdd
+
+    def set_F0(self, F0):
+        self.F0 = F0
+
+    def set_F(self, F):
+        self.F = F
+
+    def set_Fuu(self, Fuu):
+        self.Fuu = Fuu
+
+    def set_Fdd(self, Fdd):
+        self.Fdd = Fdd
 
     def set_block(self, i, j, block):
         self.matrix[4*i:4*(i+1), 4*j:4*(j+1)] = block
@@ -478,14 +490,14 @@ class Hamiltonian:
             ldos_bulk = self.dos(energies,eta=eta,idx=bulk_idx,drop_matrix=False)
             return total_dos, ldos_edge, ldos_bulk
 
-    def free_energy(self, U, V, V_prime, temperature=0, drop_matrix=False):
+    def free_energy(self, temperature, U, V, V_prime, drop_matrix=False):
         if self.matrix is None:
             raise RuntimeError("Hamiltonian matrix not built yet. "
                                "Call build() first.")
         eps = cp.linalg.eigvalsh(self.matrix)
         eps = eps[eps > 0]
         E_S = 0
-        F0, F, Fuu, Fdd = self.correlators(temperature)
+        F0, F, Fuu, Fdd = self.get_correlations()
         E_S -= U * cp.sum(cp.abs(F0)**2)
         E_S -= V * cp.sum(cp.abs(F)**2)
         E_S -= 0.5 * V_prime * cp.sum(cp.abs(Fuu)**2 + cp.abs(Fdd)**2)
@@ -493,13 +505,13 @@ class Hamiltonian:
         if drop_matrix:
             self.matrix = None
 
-        U = -(1 / 2) * cp.sum(eps)
+        internal_energy = -(1 / 2) * cp.sum(eps)
         if temperature == 0:
             S = 0
         elif temperature > 0:
             S = cp.sum(cp.log(1 + cp.exp(-eps / temperature)))
 
-        F = U + E_S - temperature * S
+        F = internal_energy - temperature * S + E_S
 
         return F
 
