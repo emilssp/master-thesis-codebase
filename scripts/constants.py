@@ -1,5 +1,6 @@
 import cupy as cp
 
+PI = cp.pi
 s0 = cp.eye(2, dtype=cp.complex128)
 s1 = cp.array([[0, 1], [1, 0]], dtype=cp.complex128)
 s2 = cp.array([[0, -1j], [1j, 0]], dtype=cp.complex128)
