@@ -1,16 +1,16 @@
-import cupy as cp
+import numpy as np
 
-PI = cp.pi
-s0 = cp.eye(2, dtype=cp.complex128)
-s1 = cp.array([[0, 1], [1, 0]], dtype=cp.complex128)
-s2 = cp.array([[0, -1j], [1j, 0]], dtype=cp.complex128)
-s3 = cp.array([[1, 0], [0, -1]], dtype=cp.complex128)
+PI = np.pi
+s0 = np.eye(2, dtype=np.complex128)
+s1 = np.array([[0, 1], [1, 0]], dtype=np.complex128)
+s2 = np.array([[0, -1j], [1j, 0]], dtype=np.complex128)
+s3 = np.array([[1, 0], [0, -1]], dtype=np.complex128)
 
-s = cp.stack([s1, s2, s3])
+s = np.stack([s1, s2, s3])
 
-e_x = cp.array([[1], [0], [0]])
-e_y = cp.array([[0], [1], [0]])
-e_z = cp.array([[0], [0], [1]])
+e_x = np.array([[1], [0], [0]])
+e_y = np.array([[0], [1], [0]])
+e_z = np.array([[0], [0], [1]])
 
 spins = {
     "x+": +s1,
