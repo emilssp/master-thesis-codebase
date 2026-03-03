@@ -4,7 +4,8 @@ import os
 import numpy as np
 import scipy.linalg as la
 import matplotlib.pyplot as plt
-from constants import PI  # type: ignore
+
+from .constants import PI  # type: ignore
 
 
 class Lattice:

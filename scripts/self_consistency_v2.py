@@ -3,8 +3,8 @@
 
 import numpy as np
 import scipy.linalg as la
-from constants import PI
-from hamiltonian_v2 import Hamiltonian, fermi_dirac
+from .constants import PI
+from .hamiltonian_v2 import Hamiltonian, fermi_dirac
 
 
 def corr_k(H: Hamiltonian, k, temperature):
