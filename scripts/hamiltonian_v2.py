@@ -198,6 +198,9 @@ class Hamiltonian:
 
         self.set_kindep(gap0, gap1, gap2, gap1_uu, gap2_uu, gap1_dd, gap2_dd)
 
+    def get_dim(self):
+        return self.dim
+
     def is_hermitian(self, atol=1e-8, rtol=1e-6):
         if self.matrix is None:
             raise RuntimeError("Hamiltonian matrix not built yet. "
@@ -220,13 +223,12 @@ class Hamiltonian:
             block = np.zeros((4, 4), dtype=np.complex128)
             block[0, 3] = gap0[i]
             block[1, 2] = -gap0[i]
-            block[2, 1] = -gap0[i].conj()
+            block[2, 1] = (-gap0[i]).conj()
             block[3, 0] = gap0[i].conj()
             self.matrix[sl, sl] += block
 
         # set in hopping block in x direction
         for i in range(self.lattice.X-1):
-            idx = i
             sli = slice(4 * i, 4 * i + 4)
             slj = slice(4 * (i + 1), 4 * (i + 1) + 4)
             self.matrix[sli, slj] += np.diag(np.array(
@@ -239,27 +241,27 @@ class Hamiltonian:
             # x+
             upper = np.zeros((4, 4), dtype=np.complex128)
 
-            upper[0, 3] = gap1[idx]
-            upper[1, 2] = -gap2[idx]
-            upper[2, 1] = -gap1[idx].conj()
-            upper[3, 0] = gap2[idx].conj()
+            upper[0, 3] = gap2[i]
+            upper[1, 2] = -gap1[i]
+            upper[2, 1] = (-gap2[i]).conj()
+            upper[3, 0] = gap1[i].conj()
 
-            upper[0, 2] = gap2_uu[idx]
-            upper[1, 3] = gap2_dd[idx]
-            upper[2, 0] = gap1_uu[idx].conj()
-            upper[3, 1] = gap1_dd[idx].conj()
+            upper[0, 2] = gap2_uu[i]
+            upper[1, 3] = gap2_dd[i]
+            upper[2, 0] = gap1_uu[i].conj()
+            upper[3, 1] = gap1_dd[i].conj()
 
             # x-
             lower = np.zeros((4, 4), dtype=np.complex128)
-            lower[0, 3] = gap2[idx]
-            lower[1, 2] = -gap1[idx]
-            lower[2, 1] = -gap2[idx].conj()
-            lower[3, 0] = gap1[idx].conj()
+            lower[0, 3] = gap1[i]
+            lower[1, 2] = -gap2[i]
+            lower[2, 1] = (-gap1[i]).conj()
+            lower[3, 0] = gap2[i].conj()
 
-            lower[0, 2] = gap1_uu[idx]
-            lower[1, 3] = gap1_dd[idx]
-            lower[2, 0] = gap2_uu[idx].conj()
-            lower[3, 1] = gap2_dd[idx].conj()
+            lower[0, 2] = gap1_uu[i]
+            lower[1, 3] = gap1_dd[i]
+            lower[2, 0] = gap2_uu[i].conj()
+            lower[3, 1] = gap2_dd[i].conj()
 
             self.matrix[sli, slj] += upper
             self.matrix[slj, sli] += lower
@@ -299,9 +301,6 @@ class Hamiltonian:
 
         self.set_kindep(gap0, gap1, gap2, gap1_uu, gap2_uu, gap1_dd, gap2_dd)
 
-    def get_dim(self):
-        return self.dim
-
     def build_Hk(self, k):
         Hk = np.zeros((self.get_dim(), self.get_dim()), dtype=np.complex128)
 
@@ -328,7 +327,7 @@ class Hamiltonian:
 
             block[0, 3] += gap_y1[i]
             block[1, 2] += -gap_y2[i]
-            block[2, 1] += -gap_y2[i].conj()
+            block[2, 1] += (-gap_y2[i]).conj()
             block[3, 0] += gap_y1[i].conj()
 
             block[0, 2] += gap_uu_y[i]
