@@ -232,13 +232,9 @@ class Hamiltonian:
             ))
             # set in BCS gap
             block = np.zeros((4, 4), dtype=np.complex128)
-            # block[:2, 2:] = 1j * gap0[i] * s2
-            # block[2:, :2] = (1j * gap0[i] * s2).conj().T
             block[0, 3] = gap0[i]
             block[1, 2] = -gap0[i]
-            block[2, 1] = -gap0[i].conj()
-            block[3, 0] = gap0[i].conj()
-
+            block[2:, :2] = block[:2, 2:].conj().T
             self.matrix[sl, sl] += block
 
         # set in hopping block in x direction
@@ -254,28 +250,20 @@ class Hamiltonian:
 
             # x+
             upper = np.zeros((4, 4), dtype=np.complex128)
-
+            upper[0, 2] = gap2_uu[i]
             upper[0, 3] = gap2[i]
             upper[1, 2] = -gap1[i]
-            upper[2, 1] = -gap2[i].conj()
-            upper[3, 0] = gap1[i].conj()
-
-            upper[0, 2] = gap2_uu[i]
             upper[1, 3] = gap2_dd[i]
-            upper[2, 0] = gap1_uu[i].conj()
-            upper[3, 1] = gap1_dd[i].conj()
 
             # # x-
             lower = np.zeros((4, 4), dtype=np.complex128)
+            lower[0, 2] = gap1_uu[i]
             lower[0, 3] = gap1[i]
             lower[1, 2] = -gap2[i]
-            lower[2, 1] = -gap1[i].conj()
-            lower[3, 0] = gap2[i].conj()
-
-            lower[0, 2] = gap1_uu[i]
             lower[1, 3] = gap1_dd[i]
-            lower[2, 0] = gap2_uu[i].conj()
-            lower[3, 1] = gap2_dd[i].conj()
+
+            lower[2:, :2] = upper[:2, 2:].T.conj()
+            upper[2:, :2] = lower[:2, 2:].T.conj()
 
             self.matrix[sli, slj] += upper
             self.matrix[slj, sli] += lower
@@ -326,8 +314,8 @@ class Hamiltonian:
 
         gap_y1 = self.V * (self.F_yplus * np.exp(-1j*k) +
                            self.F_ymin * np.exp(1j*k))
-        gap_y2 = -self.V * (self.F_yplus * np.exp(1j*k) +
-                            self.F_ymin * np.exp(-1j*k))
+        gap_y2 = self.V * (self.F_yplus * np.exp(1j*k) +
+                           self.F_ymin * np.exp(-1j*k))
 
         gap_uu_y = self.V_prime * (self.Fuu_yplus * np.exp(-1j*k) +
                                    self.Fuu_ymin * np.exp(1j*k))
@@ -360,11 +348,11 @@ class Hamiltonian:
         return Hk
 
     def dos_term(self, Hk, k, energies, eta=1e-3):
-        if k == 0:
-            evals, evecs = la.eigh(self.matrix+Hk,
-                                   subset_by_value=(0.0, np.inf))
-        else:
-            evals, evecs = la.eigh(self.matrix+Hk)
+        # if k == 0:
+        evals, evecs = la.eigh(self.matrix+Hk,
+                               subset_by_value=(0.0, np.inf))
+        # else:
+        # evals, evecs = la.eigh(self.matrix+Hk)
 
         Nx = evecs.shape[0] // 4     # number of lattice sites
 
@@ -385,8 +373,7 @@ class Hamiltonian:
 
     def dos(self, energies, eta, idx=None, drop_matrix=False):
         Ny = self.lattice.Y
-        ky_list = np.linspace(PI/Ny, PI, Ny)
-
+        ky_list = np.linspace(-PI, PI, 2*Ny, endpoint=False)
         energies = energies.ravel()
         dos_values = np.zeros_like(energies)
 
@@ -404,13 +391,13 @@ class Hamiltonian:
 
     def free_energy(self, temperature):  # broken ????
         Ny = self.lattice.Y
-        ky_list = np.linspace(PI/Ny, PI, Ny)
+        ky_list = np.linspace(-PI, PI, 2*Ny, endpoint=False)
 
         def work(ky):
             Hk = self.build_Hk(ky)
             eps = np.linalg.eigvalsh(self.matrix + Hk)
-            if ky == 0:
-                eps = eps[eps > 0]
+            # if ky == 0:
+            eps = eps[eps > 0]
             internal_energy = -0.5 * np.sum(eps)
 
             if temperature == 0:

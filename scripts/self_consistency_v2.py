@@ -8,14 +8,14 @@ from .hamiltonian_v2 import Hamiltonian, fermi_dirac
 
 
 def corr_k(H: Hamiltonian, k, temperature):
-    Ny = H.lattice.Y
+    Ny = 2 * H.lattice.Y
     Hk = H.build_Hk(k)
     # k=0, En>0
-    if k == 0:
-        evals, evecs = la.eigh(H.matrix+Hk, subset_by_value=(0.0, np.inf))
+    # if k == 0:
+    evals, evecs = la.eigh(H.matrix+Hk, subset_by_value=(0.0, np.inf))
     # k>0, En
-    else:
-        evals, evecs = la.eigh(H.matrix+Hk)
+    # else:
+    #     evals, evecs = la.eigh(H.matrix+Hk)
     f = fermi_dirac(evals, temperature)          # (Neig,)
 
     Nx = evecs.shape[0] // 4
@@ -98,16 +98,25 @@ def corr_k(H: Hamiltonian, k, temperature):
     # comps = (FS_x, FS_y, FT_xplus, FT_xmin, FT_yplus,FT_ymin)
     return acc
 
+from concurrent.futures import ProcessPoolExecutor
+from itertools import repeat
+import numpy as np
+
+def _corr_k_worker(args):
+    H, ky, temperature = args
+    return corr_k(H, ky, temperature)
+
 
 def bdg_self_consistency_step(H: Hamiltonian, temperature=0):
-    Ny = H.lattice.Y
-    ky_list = np.linspace(PI/Ny, PI, Ny)
-    acc = corr_k(H, 0, temperature=temperature)
+    Ny = 2 * H.lattice.Y
+    ky_list = np.linspace(-PI, PI, 2*Ny, endpoint=False)
 
-    for ky in ky_list:
-        corr = corr_k(H, ky, temperature=temperature)
-        acc = tuple(a + b for a, b in zip(acc, corr))
+    args = ((H, ky, temperature) for ky in ky_list)
 
+    with ProcessPoolExecutor() as pool:
+        results = list(pool.map(_corr_k_worker, args))
+
+    acc = tuple(sum(vals) for vals in zip(*results))
     return acc
 
 
@@ -144,7 +153,6 @@ def bdg_self_consistency(H: Hamiltonian, temperature=0,  # Hamiltonian
             converged = True
             H.set_correlations(corr_new)
             break
-        H.matrix
         H.set_correlations(corr_new)
 
     if not converged:
