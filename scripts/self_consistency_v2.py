@@ -10,11 +10,15 @@ from .hamiltonian_v2 import Hamiltonian, fermi_dirac
 def corr_k(H: Hamiltonian, k, temperature):
     Ny = H.lattice.Y
     Hk = H.build_Hk(k)
-    evals, evecs = la.eigh(H.matrix+Hk, subset_by_value=(0.0, np.inf))
-
+    # k=0, En>0
+    if k == 0:
+        evals, evecs = la.eigh(H.matrix+Hk, subset_by_value=(0.0, np.inf))
+    # k>0, En
+    else:
+        evals, evecs = la.eigh(H.matrix+Hk)
     f = fermi_dirac(evals, temperature)          # (Neig,)
 
-    Nx = evecs.shape[0] // 4     # number of lattice sites
+    Nx = evecs.shape[0] // 4
 
     u_up = evecs[0:4*Nx:4, :]  # u0 = u_up
     u_dn = evecs[1:4*Nx:4, :]  # v0 = u_dn
