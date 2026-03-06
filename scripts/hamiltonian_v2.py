@@ -314,8 +314,8 @@ class Hamiltonian:
 
         gap_y1 = self.V * (self.F_yplus * np.exp(-1j*k) +
                            self.F_ymin * np.exp(1j*k))
-        gap_y2 = self.V * (self.F_yplus * np.exp(1j*k) +
-                           self.F_ymin * np.exp(-1j*k))
+        gap_y2 = -self.V * (self.F_yplus * np.exp(1j*k) +
+                            self.F_ymin * np.exp(-1j*k))
 
         gap_uu_y = self.V_prime * (self.Fuu_yplus * np.exp(-1j*k) +
                                    self.Fuu_ymin * np.exp(1j*k))
