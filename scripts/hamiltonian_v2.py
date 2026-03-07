@@ -172,7 +172,7 @@ class Hamiltonian:
         self.F0 = np.zeros(Nx, dtype=np.complex128)
         self.F0[np.where(U != 0)] = F0_init
         self.F_xplus = np.zeros(Nx-1, dtype=np.complex128)
-        self.F_xplus[np.where(V[1:] != 0)] = F_init[0]
+        self.F_xplus[np.where(V[:-1] != 0)] = F_init[0]
         self.F_xmin = np.zeros(Nx-1, dtype=np.complex128)
         self.F_xmin[np.where(V[:-1] != 0)] = F_init[1]
         self.F_yplus = np.zeros(Nx, dtype=np.complex128)
@@ -183,7 +183,7 @@ class Hamiltonian:
         self.Fuu_xplus = np.zeros(Nx-1, dtype=np.complex128)
         self.Fuu_xplus[np.where(V_prime[:-1] != 0)] = Fuu_init[0]
         self.Fuu_xmin = np.zeros(Nx-1, dtype=np.complex128)
-        self.Fuu_xmin[np.where(V_prime[1:] != 0)] = Fuu_init[1]
+        self.Fuu_xmin[np.where(V_prime[:-1] != 0)] = Fuu_init[1]
         self.Fuu_yplus = np.zeros(Nx, dtype=np.complex128)
         self.Fuu_yplus[np.where(V_prime != 0)] = Fuu_init[2]
         self.Fuu_ymin = np.zeros(Nx, dtype=np.complex128)
@@ -192,7 +192,7 @@ class Hamiltonian:
         self.Fdd_xplus = np.zeros(Nx-1, dtype=np.complex128)
         self.Fdd_xplus[np.where(V_prime[:-1] != 0)] = Fdd_init[0]
         self.Fdd_xmin = np.zeros(Nx-1, dtype=np.complex128)
-        self.Fdd_xmin[np.where(V_prime[1:] != 0)] = Fdd_init[1]
+        self.Fdd_xmin[np.where(V_prime[:-1] != 0)] = Fdd_init[1]
         self.Fdd_yplus = np.zeros(Nx, dtype=np.complex128)
         self.Fdd_yplus[np.where(V_prime != 0)] = Fdd_init[2]
         self.Fdd_ymin = np.zeros(Nx, dtype=np.complex128)
@@ -248,7 +248,7 @@ class Hamiltonian:
                 [-t, -t, t, t]
             ))
 
-            # x+
+            # # x+
             upper = np.zeros((4, 4), dtype=np.complex128)
             upper[0, 2] = gap2_uu[i]
             upper[0, 3] = gap2[i]
@@ -316,7 +316,6 @@ class Hamiltonian:
                            self.F_ymin * np.exp(1j*k))
         gap_y2 = -self.V * (self.F_yplus * np.exp(1j*k) +
                             self.F_ymin * np.exp(-1j*k))
-
         gap_uu_y = self.V_prime * (self.Fuu_yplus * np.exp(-1j*k) +
                                    self.Fuu_ymin * np.exp(1j*k))
         gap_dd_y = self.V_prime * (self.Fdd_yplus * np.exp(-1j*k) +
@@ -327,20 +326,21 @@ class Hamiltonian:
 
             block = np.zeros((4, 4), dtype=np.complex128)
 
+            block[0, 3] += gap_y2[i]
+            block[1, 2] += gap_y1[i]
+            block[2, 1] += gap_y2[i].conj()
+            block[3, 0] += gap_y1[i].conj()
+
+            block[0, 2] += gap_uu_y[i]
+            block[1, 3] += gap_dd_y[i]
+            block[2, 0] += gap_uu_y[i]
+            block[3, 1] += gap_dd_y[i]
+            # block[2:, :2] = block[:2, 2:].conj().T
+
             block[0, 0] += eps
             block[1, 1] += eps
             block[2, 2] += -eps
             block[3, 3] += -eps
-
-            block[0, 3] += gap_y2[i]
-            block[1, 2] += gap_y1[i]
-            block[2, 1] += gap_y1[i].conj()
-            block[3, 0] += gap_y2[i].conj()
-
-            block[0, 2] += gap_uu_y[i]
-            block[1, 3] += gap_dd_y[i]
-            block[2, 0] += gap_uu_y[i].conj()
-            block[3, 1] += gap_dd_y[i].conj()
 
             Hk[sl, sl] += block
         # print(block)

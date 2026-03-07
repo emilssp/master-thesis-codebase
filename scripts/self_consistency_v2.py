@@ -3,12 +3,14 @@
 
 import numpy as np
 import scipy.linalg as la
+from concurrent.futures import ProcessPoolExecutor
+
 from .constants import PI
 from .hamiltonian_v2 import Hamiltonian, fermi_dirac
 
 
 def corr_k(H: Hamiltonian, k, temperature):
-    Ny = 2 * H.lattice.Y
+    Ny = H.lattice.Y
     Hk = H.build_Hk(k)
     # k=0, En>0
     # if k == 0:
@@ -98,9 +100,6 @@ def corr_k(H: Hamiltonian, k, temperature):
     # comps = (FS_x, FS_y, FT_xplus, FT_xmin, FT_yplus,FT_ymin)
     return acc
 
-from concurrent.futures import ProcessPoolExecutor
-from itertools import repeat
-import numpy as np
 
 def _corr_k_worker(args):
     H, ky, temperature = args
@@ -108,8 +107,8 @@ def _corr_k_worker(args):
 
 
 def bdg_self_consistency_step(H: Hamiltonian, temperature=0):
-    Ny = 2 * H.lattice.Y
-    ky_list = np.linspace(-PI, PI, 2*Ny, endpoint=False)
+    Ny = H.lattice.Y
+    ky_list = np.linspace(-PI, PI, Ny, endpoint=False)
 
     args = ((H, ky, temperature) for ky in ky_list)
 
