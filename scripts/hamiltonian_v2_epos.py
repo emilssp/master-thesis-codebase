@@ -136,7 +136,7 @@ def fermi_dirac(energy, T=1e-6):
     if T == 0:
         return np.zeros_like(energy)
     else:
-        return 1.0 / (np.exp(energy / T) + 1.0)
+        return 1.0 / (np.exp((energy) / T) + 1.0)
 
 
 def is_hermitian(matrix, atol=1e-8, rtol=1e-6):
@@ -348,11 +348,11 @@ class Hamiltonian:
         return Hk
 
     def dos_term(self, Hk, k, energies, eta=1e-3):
-        if k == 0:
-            evals, evecs = la.eigh(self.matrix+Hk,
-                                   subset_by_value=(0.0, np.inf))
-        else:
-            evals, evecs = la.eigh(self.matrix+Hk)
+        # if k == 0:
+        evals, evecs = la.eigh(self.matrix+Hk,
+                               subset_by_value=(0.0, np.inf))
+        # else:
+        # evals, evecs = la.eigh(self.matrix+Hk)
 
         Nx = evecs.shape[0] // 4     # number of lattice sites
 
@@ -373,7 +373,7 @@ class Hamiltonian:
 
     def dos(self, energies, eta, idx=None, drop_matrix=False):
         Ny = self.lattice.Y
-        ky_list = np.linspace(PI/Ny, PI, Ny, endpoint=False)
+        ky_list = np.linspace(-PI, PI, Ny, endpoint=False)
         energies = energies.ravel()
         dos_values = np.zeros_like(energies)
 
@@ -396,8 +396,8 @@ class Hamiltonian:
         def work(ky):
             Hk = self.build_Hk(ky)
             eps = np.linalg.eigvalsh(self.matrix + Hk)
-            if ky == 0 or abs(ky) == PI:
-                eps = eps[eps > 0]
+            # if ky == 0:
+            eps = eps[eps > 0]
             internal_energy = -0.5 * np.sum(eps)
 
             if temperature == 0:

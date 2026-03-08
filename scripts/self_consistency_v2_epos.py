@@ -13,19 +13,19 @@ def corr_k(H: Hamiltonian, k, temperature):
     Ny = H.lattice.Y
     Hk = H.build_Hk(k)
     # k=0, En>0
-    if k == 0 or abs(k) == PI:
-        evals, evecs = la.eigh(H.matrix+Hk, subset_by_value=(0.0, np.inf))
+    # if k == 0:
+    evals, evecs = la.eigh(H.matrix+Hk, subset_by_value=(0.0, np.inf))
     # k>0, En
-    else:
-        evals, evecs = la.eigh(H.matrix+Hk)
+    # else:
+    #     evals, evecs = la.eigh(H.matrix+Hk)
     f = fermi_dirac(evals, temperature)          # (Neig,)
 
     Nx = evecs.shape[0] // 4
 
-    u_up = evecs[0:4*Nx:4, :]  # u = u_up
-    u_dn = evecs[1:4*Nx:4, :]  # v = u_dn
-    v_up = evecs[2:4*Nx:4, :]  # w = v_up
-    v_dn = evecs[3:4*Nx:4, :]  # x = v_dn
+    u_up = evecs[0:4*Nx:4, :]  # u0 = u_up
+    u_dn = evecs[1:4*Nx:4, :]  # v0 = u_dn
+    v_up = evecs[2:4*Nx:4, :]  # w0 = v_up
+    v_dn = evecs[3:4*Nx:4, :]  # x0 = v_dn
 
     exp_m = np.exp(-1j * k)
     exp_p = np.exp(1j * k)
@@ -33,18 +33,15 @@ def corr_k(H: Hamiltonian, k, temperature):
     F0 = (np.einsum('nm,nm,m->n', u_up, np.conj(v_dn), (1.0 - f)) +
           np.einsum('nm,nm,m->n', u_dn, np.conj(v_up), f)) / Ny
 
-    Fx_ux1 = np.einsum('nm,nm,m->n',
-                       u_up[:-1, :], np.conj(v_dn[1:, :]), (1.0 - f))
-    Fx_ux2 = np.einsum('nm,nm,m->n',
-                       u_up[1:, :], np.conj(v_dn[:-1, :]), (1.0 - f))
-    Fx_vw1 = np.einsum('nm,nm,m->n',
-                       u_dn[:-1, :], np.conj(v_up[1:, :]), f)
-    Fx_vw2 = np.einsum('nm,nm,m->n',
-                       u_dn[1:, :], np.conj(v_up[:-1, :]), f)
+    F_xplus = (np.einsum('nm,nm,m->n',
+                         u_up[:-1, :], np.conj(v_dn[1:, :]), (1.0 - f)) +
+               np.einsum('nm,nm,m->n',
+                         u_dn[1:, :], np.conj(v_up[:-1, :]), f)) / Ny
 
-    F_xplus = (Fx_ux1 + Fx_vw2) / Ny
-
-    F_xmin = (Fx_ux2 + Fx_vw1) / Ny
+    F_xmin = (np.einsum('nm,nm,m->n',
+                        u_up[1:, :], np.conj(v_dn[:-1, :]), (1.0 - f)) +
+              np.einsum('nm,nm,m->n',
+                        u_dn[:-1, :], np.conj(v_up[1:, :]), f)) / Ny
 
     Fy1 = np.einsum('nm,nm,m->n', u_up, np.conj(v_dn), (1.0 - f))
     Fy2 = np.einsum('nm,nm,m->n', u_dn, np.conj(v_up), f)
@@ -109,10 +106,9 @@ def _corr_k_worker(args):
     return corr_k(H, ky, temperature)
 
 
-# SERIALIZE THIS JUST IN CASE OF ERROR UNDER THE PARALELIZATION
 def bdg_self_consistency_step(H: Hamiltonian, temperature=0):
     Ny = H.lattice.Y
-    ky_list = np.linspace(0, PI, Ny+1, endpoint=False)
+    ky_list = np.linspace(-PI, PI, Ny, endpoint=False)
 
     args = ((H, ky, temperature) for ky in ky_list)
 
