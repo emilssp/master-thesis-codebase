@@ -3,6 +3,7 @@
 import numpy as cp 
 
 from .constants import *
+from .hamiltonian import *
 
 
 def tc_search(H, Tmin, Tmax, mu=0, U=2, gap_0=1e-6,
@@ -40,7 +41,7 @@ def tc_search(H, Tmin, Tmax, mu=0, U=2, gap_0=1e-6,
 
     return Tc, Tc_list, T_high_list, T_low_list
 
-def sl(i_site: int, comp: int) -> int:
+def g(i_site: int, comp: int) -> int:
     """Global index for site i_site (0..Nx-1) and component comp (0..3)."""
     return 4 * i_site + comp
 

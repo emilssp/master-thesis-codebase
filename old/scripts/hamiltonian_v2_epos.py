@@ -136,7 +136,7 @@ def fermi_dirac(energy, T=1e-6):
     if T == 0:
         return np.zeros_like(energy)
     else:
-        return 1.0 / (np.exp(energy / T) + 1.0)
+        return 1.0 / (np.exp((energy) / T) + 1.0)
 
 
 def is_hermitian(matrix, atol=1e-8, rtol=1e-6):
@@ -269,27 +269,31 @@ class Hamiltonian:
             self.matrix[slj, sli] += lower
 
     def get_correlations(self):
-        return (self.F0, self.F_xplus, self.F_xmin, self.F_yplus, self.F_ymin,
-                self.Fuu_xplus, self.Fuu_xmin, self.Fuu_yplus, self.Fuu_ymin,
-                self.Fdd_xplus, self.Fdd_xmin, self.Fdd_yplus, self.Fdd_ymin)
+        return (self.F0.copy(), 
+                self.F_xplus.copy(), self.F_xmin.copy(),
+                self.F_yplus.copy(), self.F_ymin.copy(),
+                self.Fuu_xplus.copy(), self.Fuu_xmin.copy(),
+                self.Fuu_yplus.copy(), self.Fuu_ymin.copy(),
+                self.Fdd_xplus.copy(), self.Fdd_xmin.copy(),
+                self.Fdd_yplus.copy(), self.Fdd_ymin.copy())
 
     def set_correlations(self, corr):
-        self.F0 = corr[0]
+        self.F0 = corr[0].copy()
 
-        self.F_xplus = corr[1]
-        self.F_xmin = corr[2]
-        self.F_yplus = corr[3]
-        self.F_ymin = corr[4]
+        self.F_xplus = corr[1].copy()
+        self.F_xmin = corr[2].copy()
+        self.F_yplus = corr[3].copy()
+        self.F_ymin = corr[4].copy()
 
-        self.Fuu_xplus = corr[5]
-        self.Fuu_xmin = corr[6]
-        self.Fuu_yplus = corr[7]
-        self.Fuu_ymin = corr[8]
+        self.Fuu_xplus = corr[5].copy()
+        self.Fuu_xmin = corr[6].copy()
+        self.Fuu_yplus = corr[7].copy()
+        self.Fuu_ymin = corr[8].copy()
 
-        self.Fdd_xplus = corr[9]
-        self.Fdd_xmin = corr[10]
-        self.Fdd_yplus = corr[11]
-        self.Fdd_ymin = corr[12]
+        self.Fdd_xplus = corr[9].copy()
+        self.Fdd_xmin = corr[10].copy()
+        self.Fdd_yplus = corr[11].copy()
+        self.Fdd_ymin = corr[12].copy()
 
         gap0 = self.U * self.F0
         gap1 = self.V[1:] * self.F_xmin
@@ -326,15 +330,15 @@ class Hamiltonian:
 
             block = np.zeros((4, 4), dtype=np.complex128)
 
-            block[0, 3] += gap_y2[i]
-            block[1, 2] += gap_y1[i]
-            block[2, 1] += gap_y2[i].conj()
-            block[3, 0] += gap_y1[i].conj()
+            block[0, 3] += gap_y1[i]
+            block[1, 2] += gap_y2[i]
+            block[2, 1] += np.conj(gap_y2[i])
+            block[3, 0] += np.conj(gap_y1[i])
 
             block[0, 2] += gap_uu_y[i]
             block[1, 3] += gap_dd_y[i]
-            block[2, 0] += gap_uu_y[i].conj()
-            block[3, 1] += gap_dd_y[i].conj()
+            block[2, 0] += np.conj(gap_uu_y[i])
+            block[3, 1] += np.conj(gap_dd_y[i])
             # block[2:, :2] = block[:2, 2:].conj().T
 
             block[0, 0] += eps
@@ -348,11 +352,11 @@ class Hamiltonian:
         return Hk
 
     def dos_term(self, Hk, k, energies, eta=1e-3):
-        if k == 0:
-            evals, evecs = la.eigh(self.matrix+Hk,
-                                   subset_by_value=(0.0, np.inf))
-        else:
-            evals, evecs = la.eigh(self.matrix+Hk)
+        # if k == 0:
+        evals, evecs = la.eigh(self.matrix+Hk,
+                               subset_by_value=(0.0, np.inf))
+        # else:
+        # evals, evecs = la.eigh(self.matrix+Hk)
 
         Nx = evecs.shape[0] // 4     # number of lattice sites
 
@@ -373,7 +377,7 @@ class Hamiltonian:
 
     def dos(self, energies, eta, idx=None, drop_matrix=False):
         Ny = self.lattice.Y
-        ky_list = np.linspace(PI/Ny, PI, Ny, endpoint=False)
+        ky_list = np.linspace(-PI, PI, Ny, endpoint=False)
         energies = energies.ravel()
         dos_values = np.zeros_like(energies)
 
@@ -396,8 +400,8 @@ class Hamiltonian:
         def work(ky):
             Hk = self.build_Hk(ky)
             eps = np.linalg.eigvalsh(self.matrix + Hk)
-            if ky == 0 or abs(ky) == PI:
-                eps = eps[eps > 0]
+            # if ky == 0:
+            eps = eps[eps > 0]
             internal_energy = -0.5 * np.sum(eps)
 
             if temperature == 0:

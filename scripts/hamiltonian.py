@@ -1,67 +1,49 @@
-# flake8: noqa: E501
-
-import cupy as cp # type: ignore
 import numpy as np
-from .constants import *
+# import scipy.linalg as la
 import matplotlib.pyplot as plt
 
-class SquareLattice:
+from .utils import sl
+
+
+class Lattice:
     def __init__(self, X, Y=None,
-                 pbc=False, pbc_x=False, pbc_y=False):
+                 pbc_x=False, pbc_y=True):
         self.X = X
         Y = X if Y is None else Y
         self.Y = Y
-        self.pbc = pbc
-        if pbc:
-            self.pbc_x=True
-            self.pbc_y=True
-        else:
-            self.pbc_x=pbc_x
-            self.pbc_y=pbc_y
+        self.pbc_x = pbc_x
+        self.pbc_y = pbc_y
         self.num_sites = X * Y
-        self.edges = []
 
-        edges_ij = []
+        edges_x = []
+        edges_y = []
         for y in range(Y):
             for x in range(X):
                 i = y * X + x  # flat index for (x,y)
 
                 # right neighbor (x+1, y)
                 if x < X - 1:
-                    edges_ij.append((i, i + 1))
+                    edges_x.append((i, i + 1))
                 elif pbc_x and X > 2:
-                    edges_ij.append((i, y * X))
-                if x > 0:
-                    j = i - 1  # (x-1, y)
-                    edges_ij.append((i, j))
-                elif pbc_x and X > 2:
-                    # wrap to (X-1, y)
-                    j = y * X + (X - 1)
-                    edges_ij.append((i, j))
+                    edges_x.append((i, y * X))
+
                 # down neighbor (x, y+1)
                 if y < Y - 1:
-                    edges_ij.append((i, (y + 1) * X + x))
+                    edges_y.append((i, (y + 1) * X + x))
                 elif pbc_y and Y > 2:
-                    edges_ij.append((i, x))
-                if y > 0:
-                    j = (y - 1) * X + x  # (x, y-1)
-                    edges_ij.append((i, j))
-                elif pbc_y and Y > 2:
-                    # wrap to (x, Y-1)
-                    j = (Y - 1) * X + x
-                    edges_ij.append((i, j))
-        self.edges = edges_ij
-        
+                    edges_y.append((i, x))
+        self.edges_y = edges_y
+        self.edges_x = edges_x
 
     def get_coords(self, i):
         y = i // self.X
         x = i % self.X
-        return cp.asarray([x, y], dtype=int)
+        return np.asarray([x, y], dtype=int)
 
     def get_disp(self, i, j):
         ri = self.get_coords(i)  # [xi, yi]
         rj = self.get_coords(j)  # [xj, yj]
-        dr = cp.subtract(rj, ri) # [dx, dy]
+        dr = np.subtract(rj, ri)  # [dx, dy]
 
         Lx, Ly = self.X, self.Y
         if self.pbc_x:
@@ -77,7 +59,7 @@ class SquareLattice:
                 dr[1] += Ly
 
         return dr
-    
+
     def get_dir(self, i, j):
         dr = self.get_disp(i, j)
         if dr[0] == 1 and dr[1] == 0:
@@ -88,8 +70,8 @@ class SquareLattice:
             return "+y"
         elif dr[0] == 0 and dr[1] == -1:
             return "-y"
-        
-    def get_edge_and_bulk_indices(X, Y):
+
+    def get_edge_and_bulk_indices(X, Y, edge_width=1):
         edge_indices = []
         bulk_indices = []
 
@@ -97,9 +79,10 @@ class SquareLattice:
             for x in range(X):
                 i = y * X + x  # flattened index
 
-                if x == 0 or x == X - 1 or y == 0 or y == Y - 1:
+                if (x < edge_width or x >= X - edge_width or
+                        y < edge_width or y >= Y - edge_width):
                     edge_indices.append(i)
-                elif (X // 4 <= x < 3 * X // 4) and (Y // 4 <= y < 3 * Y // 4):
+                else:
                     bulk_indices.append(i)
 
         return edge_indices, bulk_indices
@@ -113,7 +96,7 @@ class SquareLattice:
                 i = y * self.X + x
                 coords[i] = (x, -y)
 
-        for i, j in self.edges:
+        for i, j in self.edges_x + self.edges_y:
             x1, y1 = coords[i]
             x2, y2 = coords[j]
             ax.plot([x1, x2], [y1, y2], 'k-', lw=1)
@@ -128,8 +111,8 @@ class SquareLattice:
                 ax.plot(xx, yy, 'ro')
                 ax.text(xx, yy, str(i), fontsize=10, ha='center', va='center',
                         color="black", bbox=dict(facecolor="red",
-                                                edgecolor="none",
-                                                boxstyle="circle,pad=0.25"))
+                                                 edgecolor="none",
+                                                 boxstyle="circle,pad=0.25"))
 
         ax.set_aspect("equal")
         ax.axis("off")
@@ -138,501 +121,213 @@ class SquareLattice:
         plt.show()
 
 
-class TriangularLattice:
-    def __init__(self, L, pbc=False):
-        self.L = L               # number of rows
-        self.pbc = False
-        self.num_sites = L * (L + 1) // 2
-
-        self.row_offset = [y * (y + 1) // 2 for y in range(L)]
-
-        self._x_of_site = [None] * self.num_sites
-        self._y_of_site = [None] * self.num_sites
-
-        edges_ij = []
-
-        for y in range(L):
-            row_len = y + 1
-            base_i = self.row_offset[y]
-
-            for x in range(row_len):
-                i = base_i + x
-                self._x_of_site[i] = x
-                self._y_of_site[i] = y
-                nbrs = [
-                    (x - 1, y),     # left
-                    (x + 1, y),     # right
-                    (x,     y - 1), # up
-                    (x - 1, y - 1), # up-left
-                    (x,     y + 1), # down
-                    (x + 1, y + 1)  # down-right
-                ]
-
-                for nx, ny in nbrs:
-                    if 0 <= ny < L and 0 <= nx <= ny:
-                        j = self.row_offset[ny] + nx
-                        if j != i:
-                            edges_ij.append((i, j))
-
-        self.edges = edges_ij
-
-    def get_coords(self, i):
-        x = self._x_of_site[i]
-        y = self._y_of_site[i]
-        return cp.asarray([x, y], dtype=int)
-    
-    def get_coords_cart(self, i):
-        x = self._x_of_site[i]
-        y = self._y_of_site[i]
-        X = x - 0.5 * y
-        Y = - (cp.sqrt(cp.array(3.0)) / 2.0) * y
-        return cp.asarray([X, Y], dtype=float)
-    
-    def get_disp(self, i, j):
-        xi = self._x_of_site[i]
-        yi = self._y_of_site[i]
-        xj = self._x_of_site[j]
-        yj = self._y_of_site[j]
-
-        dx_int = xj - xi
-        dy_int = yj - yi
-
-        dx = cp.asarray(dx_int, dtype=cp.float64)
-        dy = cp.asarray(dy_int, dtype=cp.float64)
-
-        sqrt3 = cp.sqrt(cp.array(3.0, dtype=cp.float64))
-
-        dX = dx - 0.5 * dy
-        dY = - (sqrt3 / 2.0) * dy
-
-        return cp.array([dX, dY], dtype=cp.float64)
-
-    def get_dist(self, i, j):
-        dr = self.get_disp(i, j)
-        return cp.linalg.norm(dr)
-
-    def get_index(self, loc):
-        x,y=loc
-        xs = cp.asarray(self._x_of_site, dtype=int)
-        ys = cp.asarray(self._y_of_site, dtype=int)
-
-        x = int(x)
-        y = int(y)
-
-        mask = (xs == x) & (ys == y)
-
-        idx = cp.nonzero(mask)[0]
-
-        if idx.size == 0:
-            raise ValueError(f"No site at ({x}, {y})")
-
-        return int(idx.item())
-
-    def plot(self,
-            highlight=None,
-            path=None,
-            show_labels=True,
-            show_all_labels=False,
-            show_edges=True,
-            node_size=10,
-            highlight_size=60):
-        """
-        show_labels: if False, no labels at all (fastest).
-        show_all_labels: if True, label every node (your original behaviour).
-                        Ignored if show_labels=False.
-        highlight: list of indices to emphasize.
-        """
-
-        fig, ax = plt.subplots(figsize=(6, 6))
-        coords = {}
-
-        for y in range(self.L):
-            row_len = y + 1
-            base_i = self.row_offset[y]
-            for x in range(row_len):
-                i = base_i + x
-                X = x - 0.5 * y
-                Y = - (np.sqrt(3) / 2.0) * y
-                coords[i] = (X, Y)
-
-        if show_edges:
-            for i, j in self.edges:
-                x1, y1 = coords[i]
-                x2, y2 = coords[j]
-                ax.plot([x1, x2], [y1, y2], 'k-', lw=0.5)
-
-        highlight_set = set(highlight or [])
-
-        xs_all = []
-        ys_all = []
-        xs_hi = []
-        ys_hi = []
-        for i, (xx, yy) in coords.items():
-            if i in highlight_set:
-                xs_hi.append(xx)
-                ys_hi.append(yy)
-            else:
-                xs_all.append(xx)
-                ys_all.append(yy)
-
-        ax.scatter(xs_all, ys_all, s=node_size, color='blue', zorder=4)
-        if xs_hi:
-            ax.scatter(xs_hi, ys_hi, s=highlight_size, color='red', zorder=3)
-
-        if show_labels:
-            if show_all_labels:
-                for i, (xx, yy) in coords.items():
-                    if i in highlight_set:
-                        bbox = dict(facecolor="red", edgecolor="none",
-                                    boxstyle="circle,pad=0.25")
-                        color = "black"
-                    else:
-                        bbox = dict(facecolor="black", edgecolor="none",
-                                    boxstyle="circle,pad=0.25")
-                        color = "white"
-                    ax.text(xx, yy, str(i), fontsize=6,
-                            ha='center', va='center',
-                            color=color, bbox=bbox)
-            else:
-                for i in highlight_set:
-                    xx, yy = coords[i]
-                    ax.text(xx, yy, str(i), fontsize=8,
-                            ha='center', va='center',
-                            color="black",
-                            bbox=dict(facecolor="red",
-                                    edgecolor="none",
-                                    boxstyle="circle,pad=0.25"))
-
-        ax.set_aspect("equal")
-        ax.axis("off")
-        if path is not None:
-            plt.savefig(path, bbox_inches='tight', dpi=150)
-        return fig, ax
-
-
-class Lattice:
-    """
-    Unified lattice wrapper.
-    Lattice(L, ...) -> Triangular cluster with side length L, no pbc 
-    Lattice(X, Y, pbc=False, ...) -> Square/rectangular lattice X times Y
-    Any additional kwargs are passed to the underlying lattice classes.
-    """
-
-    def __init__(self, *shape, pbc=False, **kwargs):
-
-        if len(shape) == 1:
-            # Triangular cluster of side length L
-            L = shape[0]
-            self.kind = "triangular"
-            self.backend = TriangularLattice(L, **kwargs)
-
-        elif len(shape) == 2:
-            # Square/rectangular lattice X Y
-            X, Y = shape
-            self.kind = "square"
-            self.backend = SquareLattice(X, Y, pbc=pbc, **kwargs)
-
-        else:
-            raise ValueError(
-                f"Lattice expects 1 or 2 shape arguments, got {len(shape)}: {shape}"
-            )
-
-        self.pbc = pbc
-        self.num_sites = self.backend.num_sites
-        self.edges = self.backend.edges
-
-    def __getattr__(self, name):
-        return getattr(self.backend, name)
-
-
-def delta(x, eta=1e-6): # Lorentzian approximation of delta function
-    return eta / (cp.pi * (eta**2 + x**2))
-
-def lorentzian(x, eta=1e-6):
-    return eta / (cp.pi * (x**2 + eta**2))
-
-def fermi_dirac(energy, T=1e-6):
-    if T == 0:
-        return cp.zeros_like(energy)
-    else:
-        return 1.0 / (cp.exp((energy) / T) + 1.0)
-
-
-def unconventional_gap(disp, gap_p=cp.zeros(2), gap_p_uu=cp.zeros(2),
-                       gap_p_dd=cp.zeros(2), gap_d=0, gap_s=0): 
-    dz = cp.dot(disp, gap_p)
-    dx = 0.5 * (cp.dot(disp, gap_p_uu) - cp.dot(disp, gap_p_dd))
-    dy = -0.5j * (cp.dot(disp, gap_p_uu) + cp.dot(disp, gap_p_dd))
-
-    gap_d = cp.array([gap_d, -gap_d])
-    psi = gap_s + cp.dot(cp.abs(disp), gap_d)
-
-    return cp.dot(1j*s2, (psi * s0 + dx * s1 + dy * s2 + dz * s3 )) 
-
-
 class Hamiltonian:
-    def __init__(self, lattice):
+    def __init__(self, t, mu, lattice,
+                 U=None, V=None, V_prime=None,
+                 F0_init=0, F_init=np.zeros(4),
+                 Fuu_init=np.zeros(4),
+                 Fdd_init=np.zeros(4)):
+        '''
+        Sets the hamiltonian parameters and initial conditions
+        '''
+        self.t = t
+        self.mu = mu
         self.lattice = lattice
-        N = lattice.num_sites
+        Nx = lattice.X
+        self.dim = 4 * Nx
 
-        self.matrix = cp.zeros((4*N, 4*N),dtype=cp.complex128)
-        self.gap = cp.zeros(N, dtype=cp.complex128)
-        self.F0 = cp.zeros(N, dtype=cp.complex128)
-        self.F = cp.zeros((N, N), dtype=cp.complex128)
-        self.Fuu = cp.zeros((N, N), dtype=cp.complex128)
-        self.Fdd = cp.zeros((N, N), dtype=cp.complex128)
+        if U is None:
+            U = np.zeros(Nx)
+        if V is None:
+            V = np.zeros(Nx)
+        if V_prime is None:
+            V_prime = np.zeros(Nx)
+        self.U = U
+        self.V = V
+        self.V_prime = V_prime
 
-    def get_correlations(self):
-        return self.F0, self.F, self.Fuu, self.Fdd
+        self.F0 = np.zeros(Nx, dtype=np.complex128)
+        self.F0[np.where(U != 0)] = F0_init
+        self.F_xplus = np.zeros(Nx-1, dtype=np.complex128)
+        self.F_xplus[np.where(V[:-1] != 0)] = F_init[0]
+        self.F_xmin = np.zeros(Nx-1, dtype=np.complex128)
+        self.F_xmin[np.where(V[1:] != 0)] = F_init[1]
+        self.F_yplus = np.zeros(Nx, dtype=np.complex128)
+        self.F_yplus[np.where(V != 0)] = F_init[2]
+        self.F_ymin = np.zeros(Nx, dtype=np.complex128)
+        self.F_ymin[np.where(V != 0)] = F_init[3]
 
-    def set_F0(self, F0):
-        self.F0 = F0
+        self.Fuu_xplus = np.zeros(Nx-1, dtype=np.complex128)
+        self.Fuu_xplus[np.where(V_prime[:-1] != 0)] = Fuu_init[0]
+        self.Fuu_xmin = np.zeros(Nx-1, dtype=np.complex128)
+        self.Fuu_xmin[np.where(V_prime[1:] != 0)] = Fuu_init[1]
+        self.Fuu_yplus = np.zeros(Nx, dtype=np.complex128)
+        self.Fuu_yplus[np.where(V_prime != 0)] = Fuu_init[2]
+        self.Fuu_ymin = np.zeros(Nx, dtype=np.complex128)
+        self.Fuu_ymin[np.where(V_prime != 0)] = Fuu_init[3]
 
-    def set_F(self, F):
-        self.F = F
+        self.Fdd_xplus = np.zeros(Nx-1, dtype=np.complex128)
+        self.Fdd_xplus[np.where(V_prime[:-1] != 0)] = Fdd_init[0]
+        self.Fdd_xmin = np.zeros(Nx-1, dtype=np.complex128)
+        self.Fdd_xmin[np.where(V_prime[1:] != 0)] = Fdd_init[1]
+        self.Fdd_yplus = np.zeros(Nx, dtype=np.complex128)
+        self.Fdd_yplus[np.where(V_prime != 0)] = Fdd_init[2]
+        self.Fdd_ymin = np.zeros(Nx, dtype=np.complex128)
+        self.Fdd_ymin[np.where(V_prime != 0)] = Fdd_init[3]
 
-    def set_Fuu(self, Fuu):
-        self.Fuu = Fuu
+        # self.set_kindep(gap0, gap1, gap2, gap1_uu, gap2_uu, gap1_dd, gap2_dd)
 
-    def set_Fdd(self, Fdd):
-        self.Fdd = Fdd
+    def get_dim(self):
+        return self.dim
 
-    def set_block(self, i, j, block):
-        self.matrix[4*i:4*(i+1), 4*j:4*(j+1)] = block
+    def set_kindep(self, gap0, gap1, gap2, gap1_uu, gap2_uu, gap1_dd, gap2_dd):
 
-    def set_gap(self, i=None, gap=None):
-        if gap is None:
-            raise ValueError("Gap value must be provided.")
-        if i is None:
-            self.gap[:] = gap
-        else:
-            self.gap[i] = gap
+        self.matrix = np.zeros((self.dim, self.dim), dtype=np.complex128)
+        t = self.t
 
-    def diagonalize(self, drop_matrix=False):
-        if self.matrix is None:
-            raise RuntimeError("Hamiltonian matrix not built yet. "
-                               "Call build() first.")
-        eigenvalues, eigenvectors = cp.linalg.eigh(self.matrix)
+        # set in diagonal elements (mu + 2cos(0))
+        for i in range(self.lattice.X):
+            diag = - self.mu[i]  # - 2.0 * t *cos(0)
+            sl = slice(4 * i, 4 * i + 4)
+            self.matrix[sl, sl] += np.diag(np.array(
+                [diag, diag, -diag, -diag]
+            ))
+            # set in BCS gap
+            block = np.zeros((4, 4), dtype=np.complex128)
+            block[0, 3] = gap0[i]
+            block[1, 2] = -gap0[i]
+            block[2:, :2] = block[:2, 2:].conj().T
+            self.matrix[sl, sl] += block
 
-        if drop_matrix:
-            self.matrix = None
-        return eigenvalues, eigenvectors
+        # set in hopping block in x direction
+        for i in range(self.lattice.X-1):
+            sli = slice(4 * i, 4 * i + 4)
+            slj = slice(4 * (i + 1), 4 * (i + 1) + 4)
+            self.matrix[sli, slj] += np.diag(np.array(
+                [-t, -t, t, t]
+            ))
+            self.matrix[slj, sli] += np.diag(np.array(
+                [-t, -t, t, t]
+            ))
 
-    def dos(self, energies, eta, idx=None, drop_matrix=False):
-        evals, evecs = self.diagonalize(drop_matrix=drop_matrix)
-        dos_values = cp.zeros_like(energies)
+            # # x+
+            upper = np.zeros((4, 4), dtype=np.complex128)
+            upper[0, 2] = gap2_uu[i]
+            upper[0, 3] = gap2[i]
+            upper[1, 2] = -gap1[i]
+            upper[1, 3] = gap2_dd[i]
 
-        N = self.lattice.num_sites
-        M = evals.size  # should be 4*N
-        for k in range(M):
-            E = evals[k]
-            if E < 0:
-                continue  # skip negative ones
+            # # x-
+            lower = np.zeros((4, 4), dtype=np.complex128)
+            lower[0, 2] = gap1_uu[i]
+            lower[0, 3] = gap1[i]
+            lower[1, 2] = -gap2[i]
+            lower[1, 3] = gap1_dd[i]
 
-            col = evecs[:, k]
+            lower[2:, :2] = upper[:2, 2:].T.conj()
+            upper[2:, :2] = lower[:2, 2:].T.conj()
 
-            if idx is None:
-                # (4N,) -> (N,4)
-                col_site = col.reshape(N, 4)
-                u_up = col_site[:, 0]
-                u_dn = col_site[:, 1]
-                v_up = col_site[:, 2]
-                v_dn = col_site[:, 3]
+            self.matrix[sli, slj] += upper
+            self.matrix[slj, sli] += lower
 
-                w_pos = cp.sum(cp.abs(u_up)**2 + cp.abs(u_dn)**2)
-                w_neg = cp.sum(cp.abs(v_up)**2 + cp.abs(v_dn)**2)
-            else:
-                base = 4 * idx
-                u_up = col[base + 0]
-                u_dn = col[base + 1]
-                v_up = col[base + 2]
-                v_dn = col[base + 3]
+    def build_H_k0(self):
+        H = np.zeros((self.dim, self.dim), dtype=np.complex128)
 
-                w_pos = cp.sum(cp.abs(u_up)**2 + cp.abs(u_dn)**2)
-                w_neg = cp.sum(cp.abs(v_up)**2 + cp.abs(v_dn)**2)
+        gap1 = self.V * (self.F_yplus + self.F_ymin)
+        gap2 = -self.V * (self.F_yplus + self.F_ymin)
+        # gap1_uu = self.V_prime[1:] * self.Fuu_xmin
+        # gap2_uu = self.V_prime[:-1] * self.Fuu_xplus
+        # gap1_dd = self.V_prime[1:] * self.Fuu_xmin
+        # gap2_dd = self.V_prime[:-1] * self.Fuu_xplus
 
-            dos_values += w_pos * lorentzian(energies - E, eta=eta)
-            dos_values += w_neg * lorentzian(energies + E, eta=eta)
+        for i in range(self.lattice.X):
+            H[sl(i, 0), sl(i, 0)] = -2 * self.t
+            H[sl(i, 1), sl(i, 1)] = -2 * self.t
+            H[sl(i, 2), sl(i, 2)] = 2 * self.t
+            H[sl(i, 3), sl(i, 3)] = 2 * self.t
 
-        del evecs, evals
-        cp.get_default_memory_pool().free_all_blocks()
+            H[sl(i, 0), sl(i, 3)] = gap1[i]
+            H[sl(i, 1), sl(i, 2)] = gap2[i]
+            H[sl(i, 2), sl(i, 1)] = np.conj(gap2[i])
+            H[sl(i, 3), sl(i, 0)] = np.conj(gap1[i])
+        return H
 
-        return dos_values / energies.size
+    def build_H_kindep(self):
+        gap0 = self.U * self.F0
+        gap1 = self.V[1:] * self.F_xmin
+        gap2 = self.V[:-1] * self.F_xplus
 
-    def ldos(self, energies, eta, asnumpy=True):
-        X = self.lattice.X
-        Y = self.lattice.Y
-        N = X * Y
+        H = np.zeros((self.dim, self.dim), dtype=np.complex128)
 
-        i = cp.arange(N)          # 0, 1, ..., N-1
-        x = i % X                 # column (0 ... X-1)
-        y = i // X                # row    (0 ... Y-1)
+        for i in range(self.lattice.X):
+            H[sl(i, 0), sl(i, 0)] = -self.mu[i]
+            H[sl(i, 1), sl(i, 1)] = -self.mu[i]
+            H[sl(i, 2), sl(i, 2)] = self.mu[i]
+            H[sl(i, 3), sl(i, 3)] = self.mu[i]
 
-        edge_mask = ((x == 0) | (x == X - 1) | (y == 0) | (y == Y - 1) |
-                    (x == 1) | (x == X - 2) | (y == 1) | (y == Y - 2) |
-                    (x == 2) | (x == X - 3) | (y == 2) | (y == Y - 3) )
-        edge_idx = i[edge_mask]
-        bulk_idx = i[~edge_mask]
-        if asnumpy:
-            total_dos = self.dos(energies, eta=eta,drop_matrix=False)
-            np_total_dos = cp.asnumpy(total_dos)
-            del total_dos
-            ldos_edge = self.dos(energies,eta=eta,idx=edge_idx,drop_matrix=False)
-            np_ldos_edge = cp.asnumpy(ldos_edge)
-            del ldos_edge
-            ldos_bulk = self.dos(energies,eta=eta,idx=bulk_idx,drop_matrix=False)
-            np_ldos_bulk = cp.asnumpy(ldos_bulk)
-            del ldos_bulk
-            return np_total_dos, np_ldos_edge, np_ldos_bulk
-        else:
-            total_dos = self.dos(energies, eta=eta,drop_matrix=False)
-            ldos_edge = self.dos(energies,eta=eta,idx=edge_idx,drop_matrix=False)
-            ldos_bulk = self.dos(energies,eta=eta,idx=bulk_idx,drop_matrix=False)
-            return total_dos, ldos_edge, ldos_bulk
+            H[sl(i, 0), sl(i, 3)] = gap0[i]
+            H[sl(i, 1), sl(i, 2)] = -gap0[i]
+            H[sl(i, 2), sl(i, 1)] = np.conj(-gap0[i])
+            H[sl(i, 3), sl(i, 0)] = np.conj(gap0[i])
 
-    def free_energy(self, temperature, U, V, V_prime, drop_matrix=False):
-        if self.matrix is None:
-            raise RuntimeError("Hamiltonian matrix not built yet. "
-                               "Call build() first.")
-        eps = cp.linalg.eigvalsh(self.matrix)
-        eps = eps[eps > 0]
-        E_S = 0
-        F0, F, Fuu, Fdd = self.get_correlations()
-        E_S -= U * cp.sum(cp.abs(F0)**2)
-        E_S -= V * cp.sum(cp.abs(F)**2)
-        E_S -= 0.5 * V_prime * cp.sum(cp.abs(Fuu)**2 + cp.abs(Fdd)**2)
+        for i in range(self.lattice.X - 1):
+            for c, hop in enumerate([-self.t, -self.t, self.t, self.t]):
+                H[sl(i, c),   sl(i + 1, c)] = hop
+                H[sl(i + 1, c), sl(i, c)] = hop
 
-        if drop_matrix:
-            self.matrix = None
+            # upper
+            H[sl(i, 0), sl(i+1, 3)] = gap2[i]
+            H[sl(i, 1), sl(i+1, 2)] = -gap1[i]
+            H[sl(i, 2), sl(i+1, 1)] = -np.conj(gap2[i])
+            H[sl(i, 3), sl(i+1, 0)] = np.conj(gap1[i])
 
-        internal_energy = -(1 / 2) * cp.sum(eps)
-        if temperature == 0:
-            S = 0
-        elif temperature > 0:
-            S = cp.sum(cp.log(1 + cp.exp(-eps / temperature)))
+            # lower
+            H[sl(i+1, 0), sl(i, 3)] = gap1[i]
+            H[sl(i+1, 1), sl(i, 2)] = -gap2[i]
+            H[sl(i+1, 2), sl(i, 1)] = -np.conj(gap1[i])
+            H[sl(i+1, 3), sl(i, 0)] = np.conj(gap2[i])
 
-        F = internal_energy - temperature * S + E_S
+        return H
 
-        return F
+    def build_H_k(self, k):
+        H2 = np.zeros((self.dim, self.dim), dtype=np.complex128)
 
-    def ldos_per_spin(self, energies, eta, idx=None):
-        evals, evecs = self.diagonalize(drop_matrix=False)
-        dos_up_values = cp.zeros_like(energies)
-        dos_dn_values = cp.zeros_like(energies)
+        epsilon = -2 * self.t * np.cos(k)
+        ep = np.exp(1j * k)
+        em = np.exp(-1j * k)
 
-        N = self.lattice.num_sites
-        M = evals.size  # should be 4*N
-        for k in range(M):
-            E = evals[k]
-            if E < 0:
-                continue  # skip negative ones without creating a masked copy
+        # y-pairing with phase
+        gap1 = self.V * (self.F_yplus * em + self.F_ymin * ep)
+        gap2 = -self.V * (self.F_yplus * ep + self.F_ymin * em)
 
-            col = evecs[:, k]
+        for i in range(self.lattice.X):
+            # dispersion
+            H2[sl(i, 0), sl(i, 0)] = epsilon
+            H2[sl(i, 1), sl(i, 1)] = epsilon
+            H2[sl(i, 2), sl(i, 2)] = -epsilon
+            H2[sl(i, 3), sl(i, 3)] = -epsilon
 
-            if idx is None:
-                col_site = col.reshape(N, 4)
-                u_up = col_site[:, 0]
-                u_dn = col_site[:, 1]
-                v_up = col_site[:, 2]
-                v_dn = col_site[:, 3]
+            H2[sl(i, 0), sl(i, 3)] = gap1[i]
+            H2[sl(i, 1), sl(i, 2)] = gap2[i]
+            H2[sl(i, 2), sl(i, 1)] = np.conj(gap2[i])
+            H2[sl(i, 3), sl(i, 0)] = np.conj(gap1[i])
 
-            else:
-                base = 4 * idx
-                u_up = col[base + 0]
-                u_dn = col[base + 1]
-                v_up = col[base + 2]
-                v_dn = col[base + 3]
+        return H2
 
-            dos_up_values += cp.sum(cp.abs(u_up)**2) * lorentzian(energies - E, eta=eta)
-            dos_up_values += cp.sum(cp.abs(v_up)**2) * lorentzian(energies + E, eta=eta)
+    def set_correlations(self, corr):
+        self.F0 = corr[0].copy()
 
-            dos_dn_values += cp.sum(cp.abs(u_dn)**2) * lorentzian(energies - E, eta=eta)
-            dos_dn_values += cp.sum(cp.abs(v_dn)**2) * lorentzian(energies + E, eta=eta)
-        return dos_up_values / energies.size, dos_dn_values / energies.size
+        self.F_xplus = corr[1].copy()
+        self.F_xmin = corr[2].copy()
+        self.F_yplus = corr[3].copy()
+        self.F_ymin = corr[4].copy()
 
-    def correlators(self, T):
-        N = self.lattice.num_sites
-        F0 = cp.zeros_like(self.gap)
-        F = cp.zeros((N,N), dtype=cp.complex128)
-        Fuu = cp.zeros((N,N), dtype=cp.complex128)
-        Fdd = cp.zeros((N,N), dtype=cp.complex128)
+        # self.Fuu_xplus = corr[5].copy()
+        # self.Fuu_xmin = corr[6].copy()
+        # self.Fuu_yplus = corr[7].copy()
+        # self.Fuu_ymin = corr[8].copy()
 
-        eigval, eigvec = self.diagonalize(drop_matrix=False)
-        eigvec = eigvec[:, eigval >= 0]
-        eigval = eigval[eigval >= 0]
-        eigvec = eigvec.T.reshape((eigval.size, -1, 4))
-
-        f = fermi_dirac(eigval, T)          # (Neig,)
-        u_up = eigvec[:, :, 0] #u             # (Neig, Nsites)
-        u_dn = eigvec[:, :, 1] #v
-        v_up = eigvec[:, :, 2] #w
-        v_dn = eigvec[:, :, 3] #x
-
-        F0 = (
-            cp.einsum('ni,ni,n->i', u_dn, cp.conj(v_up), f) +
-            cp.einsum('ni,ni,n->i', u_up, cp.conj(v_dn), (1-f))
-        )
-        
-        for i,j in self.lattice.edges:
-
-            # Eqn 1: F_{ij,↑↓}^d
-            F[i][j] = (
-                cp.einsum('n,n,n->', u_up[:,i], cp.conj(v_dn[:,j]), (1 - f)) +
-                cp.einsum('n,n,n->', cp.conj(v_up[:,i]), u_dn[:,j], f)
-            )        
-            # Eqn 1: F_{ji,↑↓}^d
-            F[j][i] = (
-                cp.einsum('n,n,n->', u_up[:,j], cp.conj(v_dn[:,i]), (1 - f)) +
-                cp.einsum('n,n,n->', cp.conj(v_up[:,j]), u_dn[:,i], f)
-            )
-            # Eqn 2: F_{ij,↑↑}^d
-            Fuu[i][j] = (
-                cp.einsum('n,n,n->', u_up[:,i], cp.conj(v_up[:,j]), (1 - f)) +
-                cp.einsum('n,n,n->', cp.conj(v_up[:,i]), u_up[:,j], f)
-            )
-            # Eqn 2: F_{ji,↑↑}^d
-            Fuu[j][i] = (
-                cp.einsum('n,n,n->', u_up[:,j], cp.conj(v_up[:,i]), (1 - f)) +
-                cp.einsum('n,n,n->', cp.conj(v_up[:,j]), u_up[:,i], f)
-            )
-            # Eqn 3: F_{ij,↓↓}^d
-            Fdd[i][j] = (
-                cp.einsum('n,n,n->', u_dn[:,i], cp.conj(v_dn[:,j]), (1 - f)) +
-                cp.einsum('n,n,n->', cp.conj(v_dn[:,j]), u_dn[:,i], f)
-            )
-            # Eqn 3: F_{ji,↓↓}^d
-            Fdd[j][i] = (
-                cp.einsum('n,n,n->', u_dn[:,j], cp.conj(v_dn[:,i]), (1 - f)) +
-                cp.einsum('n,n,n->', cp.conj(v_dn[:,i]), u_dn[:,j], f)
-            )
-        return F0, F, Fuu, Fdd
-
-
-def rotate120(loc, X):
-    L = X - 1
-    x, y = int(loc[0]), int(loc[1])
-    return cp.array([y - x, L - x])
-
-def find_equilateral_triplet(X, pad, dist):
-    L = X - 1
-
-    if dist < 1 or dist > L - 3*pad:
-        raise ValueError(f"No 120°-symmetric triple with dist={dist} "
-                         f"for X={X}, pad={pad} (max dist is {L - 3*pad}).")
-
-    for i in range(pad, L - 2*pad + 1):
-        # j >= pad, k = L - i - j >= pad  ->  j <= L - i - pad
-        for j in range(pad, L - i - pad + 1):
-            k = L - i - j
-            if k < pad:
-                continue
-            vals = sorted((i, j, k))
-            if vals[-1] - vals[0] == dist:
-                # convert (i,j,k) -> (x,y) using x=i, j=y-x
-                x1, y1 = i, i + j
-                loc1 = cp.array([x1, y1])
-                loc2 = rotate120(loc1, X)
-                loc3 = rotate120(loc2, X)
-                return loc1, loc2, loc3
-
-    raise ValueError(f"No configuration found for dist={dist}.")
+        # self.Fdd_xplus = corr[9].copy()
+        # self.Fdd_xmin = corr[10].copy()
+        # self.Fdd_yplus = corr[11].copy()
+        # self.Fdd_ymin = corr[12].copy()

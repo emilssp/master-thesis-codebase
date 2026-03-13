@@ -3,51 +3,55 @@
 
 import numpy as np
 import scipy.linalg as la
-from concurrent.futures import ProcessPoolExecutor
+from operator import add
 
 from .constants import PI
-from .hamiltonian_v2 import Hamiltonian, fermi_dirac
+from .hamiltonian_v2 import Hamiltonian
+from .utils import fermi_dirac
 
 
-def corr_k(H: Hamiltonian, k, temperature):
+def corr_k(H: Hamiltonian, H_kindep, k, temperature):
     Ny = H.lattice.Y
-    Hk = H.build_Hk(k)
     # k=0, En>0
-    # if k == 0:
-    evals, evecs = la.eigh(H.matrix+Hk, subset_by_value=(0.0, np.inf))
+    if k == 0:  # or abs(k) == PI:
+        H_k0 = H.build_H_k0()
+        evals, evecs = la.eigh(H_kindep + H_k0,
+                               subset_by_value=(0.0, np.inf))
     # k>0, En
-    # else:
-    #     evals, evecs = la.eigh(H.matrix+Hk)
-    f = fermi_dirac(evals, temperature)          # (Neig,)
+    else:
+        Hk = H.build_H_k(k)
+        evals, evecs = la.eigh(H_kindep + Hk)
+    f = fermi_dirac(evals, temperature)
+    energies = np.tile(evals, (H.lattice.X, 1))
+    f_E = fermi_dirac(energies, temperature)          # (Neig,)
 
-    Nx = evecs.shape[0] // 4
-
-    u_up = evecs[0:4*Nx:4, :]  # u0 = u_up
-    u_dn = evecs[1:4*Nx:4, :]  # v0 = u_dn
-    v_up = evecs[2:4*Nx:4, :]  # w0 = v_up
-    v_dn = evecs[3:4*Nx:4, :]  # x0 = v_dn
+    u_up = evecs[0::4, :]  # u = u_up
+    u_dn = evecs[1::4, :]  # v = u_dn
+    v_up = evecs[2::4, :]  # w = v_up
+    v_dn = evecs[3::4, :]  # x = v_dn
 
     exp_m = np.exp(-1j * k)
     exp_p = np.exp(1j * k)
 
-    F0 = (np.einsum('nm,nm,m->n', u_up, np.conj(v_dn), (1.0 - f)) +
+    F0 = (np.einsum('nm,nm,m->n', u_up, np.conj(v_dn), (1-f)) +
           np.einsum('nm,nm,m->n', u_dn, np.conj(v_up), f)) / Ny
 
-    F_xplus = (np.einsum('nm,nm,m->n',
-                         u_up[:-1, :], np.conj(v_dn[1:, :]), (1.0 - f)) +
-               np.einsum('nm,nm,m->n',
-                         u_dn[1:, :], np.conj(v_up[:-1, :]), f)) / Ny
+    # experiment
+    Fx_ux1 = u_up[:-1, :] * np.conj(v_dn[1:, :]) * (1 - f_E[:-1, :])
+    Fx_ux2 = u_up[1:, :] * np.conj(v_dn[:-1, :]) * (1 - f_E[1:, :])
+    Fx_vw1 = u_dn[:-1, :] * np.conj(v_up[1:, :]) * (f_E[1:, :])
+    Fx_vw2 = u_dn[1:, :] * np.conj(v_up[:-1, :]) * (f_E[:-1, :])
 
-    F_xmin = (np.einsum('nm,nm,m->n',
-                        u_up[1:, :], np.conj(v_dn[:-1, :]), (1.0 - f)) +
-              np.einsum('nm,nm,m->n',
-                        u_dn[:-1, :], np.conj(v_up[1:, :]), f)) / Ny
+    F_xplus = np.sum(Fx_ux1 + Fx_vw2, axis=1) / Ny
+    F_xmin = np.sum(Fx_ux2 + Fx_vw1, axis=1) / Ny
 
-    Fy1 = np.einsum('nm,nm,m->n', u_up, np.conj(v_dn), (1.0 - f))
-    Fy2 = np.einsum('nm,nm,m->n', u_dn, np.conj(v_up), f)
+    Fy_ux = u_up * np.conj(v_dn) * (1 - f_E)
+    Fy_vw = u_dn * np.conj(v_up) * f_E
 
-    F_yplus = (Fy1 * exp_p + Fy2 * exp_m) / Ny
-    F_ymin = (Fy1 * exp_m + Fy2 * exp_p) / Ny
+    F_yplus = np.sum(Fy_ux * exp_p + Fy_vw * exp_m, axis=1) / Ny
+    F_ymin = np.sum(Fy_ux * exp_m + Fy_vw * exp_p, axis=1) / Ny
+
+    # end experiment
 
     Fuu_xplus = (
             np.einsum('nm,nm,m->n',
@@ -101,21 +105,17 @@ def corr_k(H: Hamiltonian, k, temperature):
     return acc
 
 
-def _corr_k_worker(args):
-    H, ky, temperature = args
-    return corr_k(H, ky, temperature)
-
-
-def bdg_self_consistency_step(H: Hamiltonian, temperature=0):
+# SERIALIZE THIS JUST IN CASE OF ERROR UNDER THE PARALELIZATION
+def bdg_self_consistency_step(H: Hamiltonian, H_kindep, temperature=0):
     Ny = H.lattice.Y
-    ky_list = np.linspace(-PI, PI, Ny, endpoint=False)
+    ky_list = np.linspace(PI/Ny, PI, Ny, endpoint=False)
 
-    args = ((H, ky, temperature) for ky in ky_list)
+    acc = corr_k(H, H_kindep, 0, temperature)
 
-    with ProcessPoolExecutor() as pool:
-        results = list(pool.map(_corr_k_worker, args))
+    for k in ky_list:
+        corr = corr_k(H, H_kindep, k, temperature)
+        acc = tuple(map(add, acc, corr))
 
-    acc = tuple(sum(vals) for vals in zip(*results))
     return acc
 
 
@@ -124,7 +124,10 @@ def bdg_self_consistency(H: Hamiltonian, temperature=0,  # Hamiltonian
     converged = False
     for iteration in range(maxiter):
         corr = H.get_correlations()
-        corr_new = bdg_self_consistency_step(H, temperature)
+
+        H_kindep = H.build_H_kindep()
+
+        corr_new = bdg_self_consistency_step(H, H_kindep, temperature)
 
         abs_diff = np.array([np.linalg.norm(c2-c1)
                              for c1, c2 in zip(corr, corr_new)])

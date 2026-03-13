@@ -6,6 +6,7 @@ import scipy.linalg as la
 import matplotlib.pyplot as plt
 
 from .constants import PI  # type: ignore
+from .utils import lorentzian, g
 
 
 class Lattice:
@@ -124,26 +125,6 @@ class Lattice:
         plt.show()
 
 
-def delta(x, eta=1e-6):  # Lorentzian approximation of delta function
-    return eta / (PI * (eta**2 + x**2))
-
-
-def lorentzian(x, eta=1e-6):
-    return eta / (PI * (x**2 + eta**2))
-
-
-def fermi_dirac(energy, T=1e-6):
-    if T == 0:
-        return np.zeros_like(energy)
-    else:
-        return 1.0 / (np.exp((energy) / T) + 1.0)
-
-
-def is_hermitian(matrix, atol=1e-8, rtol=1e-6):
-    is_hermitian = np.allclose(matrix, matrix.conj().T, rtol=rtol, atol=atol)
-    return is_hermitian
-
-
 class Hamiltonian:
     def __init__(self, t, mu, lattice,
                  U=None, V=None, V_prime=None,
@@ -151,7 +132,7 @@ class Hamiltonian:
                  Fuu_init=np.zeros(4),
                  Fdd_init=np.zeros(4)):
         '''
-        Builds k-independent Hamiltonian matrix
+        Sets the hamiltonian parameters and initial conditions
         '''
         self.t = t
         self.mu = mu
@@ -198,17 +179,7 @@ class Hamiltonian:
         self.Fdd_ymin = np.zeros(Nx, dtype=np.complex128)
         self.Fdd_ymin[np.where(V_prime != 0)] = Fdd_init[3]
 
-        gap0 = U * self.F0
-        gap1 = V[1:] * self.F_xmin
-        gap2 = V[:-1] * self.F_xplus
-        gap1_uu = V_prime[1:] * self.Fuu_xmin
-        gap2_uu = V_prime[:-1] * self.Fuu_xplus
-        gap1_dd = V_prime[1:] * self.Fuu_xmin
-        gap2_dd = V_prime[:-1] * self.Fuu_xplus
-
-        self.matrix = np.zeros((self.dim, self.dim), dtype=np.complex128)
-
-        self.set_kindep(gap0, gap1, gap2, gap1_uu, gap2_uu, gap1_dd, gap2_dd)
+        # self.set_kindep(gap0, gap1, gap2, gap1_uu, gap2_uu, gap1_dd, gap2_dd)
 
     def get_dim(self):
         return self.dim
@@ -222,7 +193,10 @@ class Hamiltonian:
         return is_hermitian
 
     def set_kindep(self, gap0, gap1, gap2, gap1_uu, gap2_uu, gap1_dd, gap2_dd):
+
+        self.matrix = np.zeros((self.dim, self.dim), dtype=np.complex128)
         t = self.t
+
         # set in diagonal elements (mu + 2cos(0))
         for i in range(self.lattice.X):
             diag = - self.mu[i]  # - 2.0 * t *cos(0)
@@ -268,91 +242,166 @@ class Hamiltonian:
             self.matrix[sli, slj] += upper
             self.matrix[slj, sli] += lower
 
+    def build_H_k0(self):
+        H = np.zeros((self.dim, self.dim), dtype=np.complex128)
+
+        gap1 = self.V * (self.F_yplus + self.F_ymin)
+        gap2 = -self.V * (self.F_yplus + self.F_ymin)
+        # gap1_uu = self.V_prime[1:] * self.Fuu_xmin
+        # gap2_uu = self.V_prime[:-1] * self.Fuu_xplus
+        # gap1_dd = self.V_prime[1:] * self.Fuu_xmin
+        # gap2_dd = self.V_prime[:-1] * self.Fuu_xplus
+
+        for i in range(self.lattice.X):
+            H[g(i, 0), g(i, 0)] = -2 * self.t
+            H[g(i, 1), g(i, 1)] = -2 * self.t
+            H[g(i, 2), g(i, 2)] = 2 * self.t
+            H[g(i, 3), g(i, 3)] = 2 * self.t
+
+            H[g(i, 0), g(i, 3)] = gap1[i]
+            H[g(i, 1), g(i, 2)] = gap2[i]
+            H[g(i, 2), g(i, 1)] = gap2[i].conj()
+            H[g(i, 3), g(i, 0)] = gap1[i].conj()
+        return H
+
+    def build_H_kindep(self):
+        # gap0 = self.U * self.F0
+        gap1 = self.V[1:] * self.F_xmin
+        gap2 = self.V[:-1] * self.F_xplus
+        # gap1_uu = self.V_prime[1:] * self.Fuu_xmin
+        # gap2_uu = self.V_prime[:-1] * self.Fuu_xplus
+        # gap1_dd = self.V_prime[1:] * self.Fuu_xmin
+        # gap2_dd = self.V_prime[:-1] * self.Fuu_xplus
+
+        H = np.zeros((self.dim, self.dim), dtype=np.complex128)
+
+        for i in range(self.lattice.X):
+            H[g(i, 0), g(i, 0)] = -self.mu[i]
+            H[g(i, 1), g(i, 1)] = -self.mu[i]
+            H[g(i, 2), g(i, 2)] = self.mu[i]
+            H[g(i, 3), g(i, 3)] = self.mu[i]
+
+        for i in range(self.lattice.X - 1):
+            for c, hop in enumerate([-self.t, -self.t, self.t, self.t]):
+                H[g(i, c),   g(i + 1, c)] = hop
+                H[g(i + 1, c), g(i, c)] = hop
+
+            # upper
+            H[g(i, 0), g(i+1, 3)] = gap2[i]
+            H[g(i, 1), g(i+1, 2)] = -gap1[i]
+            H[g(i, 2), g(i+1, 1)] = -np.conj(gap2[i])
+            H[g(i, 3), g(i+1, 0)] = np.conj(gap1[i])
+
+            # lower
+            H[g(i+1, 0), g(i, 3)] = gap1[i]
+            H[g(i+1, 1), g(i, 2)] = -gap2[i]
+            H[g(i+1, 2), g(i, 1)] = -np.conj(gap1[i])
+            H[g(i+1, 3), g(i, 0)] = np.conj(gap2[i])
+
+        return H
+
+    def build_H_k(self, k):
+        H2 = np.zeros((self.dim, self.dim), dtype=np.complex128)
+
+        epsilon = -2 * self.t * np.cos(k)
+        ep = np.exp(1j * k)
+        em = np.exp(-1j * k)
+
+        # y-pairing with phase
+        gap1 = self.V * (self.F_yplus * em + self.F_ymin * ep)
+        gap2 = -self.V * (self.F_yplus * ep + self.F_ymin * em)
+
+        for i in range(self.lattice.X):
+            # dispersion
+            H2[g(i, 0), g(i, 0)] = epsilon
+            H2[g(i, 1), g(i, 1)] = epsilon
+            H2[g(i, 2), g(i, 2)] = -epsilon
+            H2[g(i, 3), g(i, 3)] = -epsilon
+
+            H2[g(i, 0), g(i, 3)] = gap1[i]
+            H2[g(i, 1), g(i, 2)] = gap2[i]
+            H2[g(i, 2), g(i, 1)] = np.conj(gap2[i])
+            H2[g(i, 3), g(i, 0)] = np.conj(gap1[i])
+
+        return H2
+
     def get_correlations(self):
-        return (self.F0, self.F_xplus, self.F_xmin, self.F_yplus, self.F_ymin,
+        return (self.F0.copy(),
+                self.F_xplus.copy(), self.F_xmin.copy(),
+                self.F_yplus.copy(), self.F_ymin.copy(),
                 self.Fuu_xplus, self.Fuu_xmin, self.Fuu_yplus, self.Fuu_ymin,
                 self.Fdd_xplus, self.Fdd_xmin, self.Fdd_yplus, self.Fdd_ymin)
 
     def set_correlations(self, corr):
-        self.F0 = corr[0]
+        # self.F0 = corr[0]
 
-        self.F_xplus = corr[1]
-        self.F_xmin = corr[2]
-        self.F_yplus = corr[3]
-        self.F_ymin = corr[4]
+        self.F_xplus = corr[0].copy()
+        self.F_xmin = corr[1].copy()
+        self.F_yplus = corr[2].copy()
+        self.F_ymin = corr[3].copy()
 
-        self.Fuu_xplus = corr[5]
-        self.Fuu_xmin = corr[6]
-        self.Fuu_yplus = corr[7]
-        self.Fuu_ymin = corr[8]
+        # self.Fuu_xplus = corr[5]
+        # self.Fuu_xmin = corr[6]
+        # self.Fuu_yplus = corr[7]
+        # self.Fuu_ymin = corr[8]
 
-        self.Fdd_xplus = corr[9]
-        self.Fdd_xmin = corr[10]
-        self.Fdd_yplus = corr[11]
-        self.Fdd_ymin = corr[12]
+        # self.Fdd_xplus = corr[9]
+        # self.Fdd_xmin = corr[10]
+        # self.Fdd_yplus = corr[11]
+        # self.Fdd_ymin = corr[12]
 
-        gap0 = self.U * self.F0
-        gap1 = self.V[1:] * self.F_xmin
-        gap2 = self.V[:-1] * self.F_xplus
-        gap1_uu = self.V_prime[1:] * self.Fuu_xmin
-        gap2_uu = self.V_prime[:-1] * self.Fuu_xplus
-        gap1_dd = self.V_prime[1:] * self.Fuu_xmin
-        gap2_dd = self.V_prime[:-1] * self.Fuu_xplus
+    # def build_Hk(self, k):
+    #     Hk = np.zeros((self.get_dim(), self.get_dim()), dtype=np.complex128)
 
-        self.matrix = np.zeros((self.dim, self.dim), dtype=np.complex128)
+    #     eps = -2.0 * self.t * np.cos(k)
 
-        self.set_kindep(gap0, gap1, gap2, gap1_uu, gap2_uu, gap1_dd, gap2_dd)
+    #     gap_y1 = np.zeros_like(self.V, dtype=np.complex128)
+    #     gap_y2 = np.zeros_like(self.V, dtype=np.complex128)
+    #     gap_uu_y = np.zeros_like(self.V_prime, dtype=np.complex128)
+    #     gap_uu_y = np.zeros_like(self.V_prime, dtype=np.complex128)
 
-    def build_Hk(self, k):
-        Hk = np.zeros((self.get_dim(), self.get_dim()), dtype=np.complex128)
+    #     gap_y1 = self.V * (self.F_yplus * np.exp(-1j*k) +
+    #                        self.F_ymin * np.exp(1j*k))
+    #     gap_y2 = -self.V * (self.F_yplus * np.exp(1j*k) +
+    #                         self.F_ymin * np.exp(-1j*k))
+    #     gap_uu_y = -2j * self.V_prime * (self.Fuu_yplus * np.sin(k))
+    #     gap_dd_y = -2j * self.V_prime * (self.Fdd_yplus * np.sin(k))
 
-        eps = -2.0 * self.t * np.cos(k)
-        gap_y1 = np.zeros_like(self.V, dtype=np.complex128)
-        gap_y2 = np.zeros_like(self.V, dtype=np.complex128)
-        gap_uu_y = np.zeros_like(self.V_prime, dtype=np.complex128)
-        gap_uu_y = np.zeros_like(self.V_prime, dtype=np.complex128)
+    #     # gap_dd_y = self.V_prime * (self.Fdd_yplus * np.exp(-1j*k) +
+    #     #                            self.Fdd_ymin * np.exp(1j*k))
 
-        gap_y1 = self.V * (self.F_yplus * np.exp(-1j*k) +
-                           self.F_ymin * np.exp(1j*k))
-        gap_y2 = -self.V * (self.F_yplus * np.exp(1j*k) +
-                            self.F_ymin * np.exp(-1j*k))
-        gap_uu_y = self.V_prime * (self.Fuu_yplus * np.exp(-1j*k) +
-                                   self.Fuu_ymin * np.exp(1j*k))
-        gap_dd_y = self.V_prime * (self.Fdd_yplus * np.exp(-1j*k) +
-                                   self.Fdd_ymin * np.exp(1j*k))
+    #     for i in range(self.lattice.X):
+    #         sl = slice(4 * i, 4 * (i+1))
 
-        for i in range(self.lattice.X):
-            sl = slice(4 * i, 4 * (i+1))
+    #         block = np.zeros((4, 4), dtype=np.complex128)
 
-            block = np.zeros((4, 4), dtype=np.complex128)
+    #         block[0, 3] += gap_y1[i]
+    #         block[1, 2] += gap_y2[i]
+    #         block[2, 1] += gap_y2[i].conj()
+    #         block[3, 0] += gap_y1[i].conj()
 
-            block[0, 3] += gap_y2[i]
-            block[1, 2] += gap_y1[i]
-            block[2, 1] += gap_y2[i].conj()
-            block[3, 0] += gap_y1[i].conj()
+    #         block[0, 2] += gap_uu_y[i]
+    #         block[1, 3] += gap_dd_y[i]
+    #         block[2, 0] += gap_uu_y[i].conj()
+    #         block[3, 1] += gap_dd_y[i].conj()
+    #         # block[2:, :2] = block[:2, 2:].conj().T
 
-            block[0, 2] += gap_uu_y[i]
-            block[1, 3] += gap_dd_y[i]
-            block[2, 0] += gap_uu_y[i].conj()
-            block[3, 1] += gap_dd_y[i].conj()
-            # block[2:, :2] = block[:2, 2:].conj().T
+    #         block[0, 0] += eps
+    #         block[1, 1] += eps
+    #         block[2, 2] += -eps
+    #         block[3, 3] += -eps
 
-            block[0, 0] += eps
-            block[1, 1] += eps
-            block[2, 2] += -eps
-            block[3, 3] += -eps
+    #         Hk[sl, sl] += block
+    #     # print(block)
 
-            Hk[sl, sl] += block
-        # print(block)
-
-        return Hk
+    #     return Hk
 
     def dos_term(self, Hk, k, energies, eta=1e-3):
-        # if k == 0:
-        evals, evecs = la.eigh(self.matrix+Hk,
-                               subset_by_value=(0.0, np.inf))
-        # else:
-        # evals, evecs = la.eigh(self.matrix+Hk)
+        if k == 0:
+            evals, evecs = la.eigh(self.matrix+Hk,
+                                   subset_by_value=(0.0, np.inf))
+        else:
+            evals, evecs = la.eigh(self.matrix+Hk)
 
         Nx = evecs.shape[0] // 4     # number of lattice sites
 
@@ -373,7 +422,7 @@ class Hamiltonian:
 
     def dos(self, energies, eta, idx=None, drop_matrix=False):
         Ny = self.lattice.Y
-        ky_list = np.linspace(-PI, PI, Ny, endpoint=False)
+        ky_list = np.linspace(PI/Ny, PI, Ny, endpoint=False)
         energies = energies.ravel()
         dos_values = np.zeros_like(energies)
 
@@ -396,8 +445,8 @@ class Hamiltonian:
         def work(ky):
             Hk = self.build_Hk(ky)
             eps = np.linalg.eigvalsh(self.matrix + Hk)
-            # if ky == 0:
-            eps = eps[eps > 0]
+            if ky == 0 or abs(ky) == PI:
+                eps = eps[eps > 0]
             internal_energy = -0.5 * np.sum(eps)
 
             if temperature == 0:

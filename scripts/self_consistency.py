@@ -1,202 +1,207 @@
-import cupy as cp  # type: ignore
-from .constants import *
-from .hamiltonian import *
+import numpy as np
+import scipy.linalg as la
+
+from .constants import PI
+from .hamiltonian import Hamiltonian
+from .utils import fermi_dirac
 
 
-def correlators(H, T):
-    N = H.lattice.num_sites
-    F0 = cp.zeros_like(H.gap)
-    F = cp.zeros((N, N), dtype=cp.complex128)
-    Fuu = cp.zeros((N, N), dtype=cp.complex128)
-    Fdd = cp.zeros((N, N), dtype=cp.complex128)
+def bdg_sc(H: Hamiltonian, temperature=0,  # Hamiltonian
+           atol=1e-6, rtol=1e-4, maxiter=100, verbose=False):
 
-    eigval, eigvec = H.diagonalize(drop_matrix=False)
-    eigvec = eigvec[:, eigval >= 0]
-    eigval = eigval[eigval >= 0]
-    eigvec = eigvec.T.reshape((eigval.size, -1, 4))
+    converged = False
+    Ny = H.lattice.Y
+    Nx = H.lattice.X
+    ky_list = np.linspace(PI / Ny, PI, Ny)
 
-    f = fermi_dirac(eigval, T)          # (Neig,)
-    u_up = eigvec[:, :, 0]  # u             # (Neig, Nsites)
-    u_dn = eigvec[:, :, 1]  # v
-    v_up = eigvec[:, :, 2]  # w
-    v_dn = eigvec[:, :, 3]  # x
+    F0 = H.F0.copy()
+    F_xplus = H.F_xplus.copy()
+    F_xmin = H.F_xmin.copy()
+    F_yplus = H.F_yplus.copy()
+    F_ymin = H.F_ymin.copy()
 
-    F0 = (
-        cp.einsum('ni,ni,n->i', u_dn, cp.conj(v_up), f) +
-        cp.einsum('ni,ni,n->i', u_up, cp.conj(v_dn), (1-f))
-    )
+    for iteration in range(maxiter):
 
-    for i, j in H.lattice.edges:
+        H_kindep = H.build_H_kindep()
+        H_k0 = H.build_H_k0()
 
-        # Eqn 1: F_{ij,↑↓}^d
-        F[i][j] = (
-            cp.einsum('n,n,n->', u_up[:, i], cp.conj(v_dn[:, j]), (1 - f)) +
-            cp.einsum('n,n,n->', cp.conj(v_up[:, i]), u_dn[:, j], f)
+        eigval0, eigvec0 = la.eigh(
+            H_kindep + H_k0,
+            subset_by_value=(0, np.inf)
         )
-        # Eqn 1: F_{ji,↑↓}^d
-        F[j][i] = (
-            cp.einsum('n,n,n->', u_up[:, j], cp.conj(v_dn[:, i]), (1 - f)) +
-            cp.einsum('n,n,n->', cp.conj(v_up[:, j]), u_dn[:, i], f)
-        )
-        # Eqn 2: F_{ij,↑↑}^d
-        Fuu[i][j] = (
-            cp.einsum('n,n,n->', u_up[:, i], cp.conj(v_up[:, j]), (1 - f)) +
-            cp.einsum('n,n,n->', cp.conj(v_up[:, i]), u_up[:, j], f)
-        )
-        # Eqn 2: F_{ji,↑↑}^d
-        Fuu[j][i] = (
-            cp.einsum('n,n,n->', u_up[:, j], cp.conj(v_up[:, i]), (1 - f)) +
-            cp.einsum('n,n,n->', cp.conj(v_up[:, j]), u_up[:, i], f)
-        )
-        # Eqn 3: F_{ij,↓↓}^d
-        Fdd[i][j] = (
-            cp.einsum('n,n,n->', u_dn[:, i], cp.conj(v_dn[:, j]), (1 - f)) +
-            cp.einsum('n,n,n->', cp.conj(v_dn[:, j]), u_dn[:, i], f)
-        )
-        # Eqn 3: F_{ji,↓↓}^d
-        Fdd[j][i] = (
-            cp.einsum('n,n,n->', u_dn[:, j], cp.conj(v_dn[:, i]), (1 - f)) +
-            cp.einsum('n,n,n->', cp.conj(v_dn[:, i]), u_dn[:, j], f)
-        )
-    return F0, F, Fuu, Fdd
 
+        u0 = eigvec0[0::4, :]
+        v0 = eigvec0[1::4, :]
+        w0 = eigvec0[2::4, :]
+        x0 = eigvec0[3::4, :]
 
-def arr_converged(new, old, atol, rtol,
-                  nonzero_threshold=1e-6):
-    abs = cp.linalg.norm(new - old) < atol
-    rel = (
-        cp.linalg.norm((new-old)/(new + nonzero_threshold)) < rtol
-        or cp.linalg.norm(new) < nonzero_threshold)
-    return abs and rel
+        f = fermi_dirac(eigval0, temperature)
+        f_E0 = np.tile(f, (Nx, 1))
 
+        # Onsite
+        F0_ux = np.einsum('nm,nm,nm->n', u0, np.conj(x0), (1 - f_E0))
+        F0_vw = np.einsum('nm,nm,nm->n', v0, np.conj(w0), f_E0)
 
-def bdg_self_consistency_step(H,  # Hamiltonian
-                              U=None, V=None, V_prime=None, T=0,  # Parameters
-                              atol=1e-6, rtol=1e-4, mix=1.0):  # Tolerances
-    F0, F, Fuu, Fdd = H.get_correlations()
-    F0_new, F_new, Fuu_new, Fdd_new = correlators(H, T)
-    F0_new = mix * F0_new + (1-mix) * F0
-    F_new = mix * F_new + (1-mix) * F
-    Fuu_new = mix * Fuu_new + (1-mix) * Fuu
-    Fdd_new = mix * Fdd_new + (1-mix) * Fdd
+        # x-bond pieces
+        Fx0_ux1 = np.einsum('nm,nm,nm->n', u0[:-1, :],
+                            np.conj(x0[1:, :]), (1 - f_E0[:-1, :]))
 
-    for i in range(H.lattice.num_sites):
-        # indices for the 4x4 block of site i
-        sl = slice(4*i, 4*(i+1))
-        H.matrix[sl, sl][:2, 2:] = 1j * U[i] * F0_new[i] * s2
-        H.matrix[sl, sl][2:, :2] = (1j * U[i] * F0_new[i] * s2).conj().T
+        Fx0_ux2 = np.einsum('nm,nm,nm->n', u0[1:, :],
+                            np.conj(x0[:-1, :]), (1 - f_E0[1:, :]))
 
-    for i, j in H.lattice.edges:
-        sli = slice(4*i, 4*(i+1))
-        slj = slice(4*j, 4*(j+1))
+        Fx0_vw1 = np.einsum('nm,nm,nm->n', v0[:-1, :],
+                            np.conj(w0[1:, :]), f_E0[1:, :])
 
-        H.matrix[sli, slj][0, 3] = V[j] * F_new[i][j]
-        H.matrix[sli, slj][1, 2] = V[j] * F_new[i][j]
-        H.matrix[sli, slj][2, 1] = (V[j] * F_new[j][i]).conj().T
-        H.matrix[sli, slj][3, 0] = (V[j] * F_new[j][i]).conj().T
+        Fx0_vw2 = np.einsum('nm,nm,nm->n', v0[1:, :],
+                            np.conj(w0[:-1, :]), f_E0[:-1, :])
 
-        H.matrix[slj, sli][0, 2] = -V_prime[j] * Fuu_new[i][j]
-        H.matrix[slj, sli][1, 3] = -V_prime[j] * Fdd_new[i][j]
-        H.matrix[slj, sli][2, 0] = (-V_prime[j] * Fuu_new[j][i]).conj().T
-        H.matrix[slj, sli][3, 1] = (-V_prime[j] * Fdd_new[j][i]).conj().T
+        # y-bond pieces
+        Fy0_ux = np.einsum('nm,nm,nm->n', u0, np.conj(x0), (1 - f_E0))
+        Fy0_vw = np.einsum('nm,nm,nm->n', v0, np.conj(w0), f_E0)
 
-    if (arr_converged(F0_new, F0, atol, rtol)
-            and arr_converged(F_new, F, atol, rtol)
-            and arr_converged(Fuu_new, Fuu, atol, rtol)
-            and arr_converged(Fdd_new, Fdd, atol, rtol)):
-        flag = True
-    else:
-        flag = False
-    return flag, F0_new, F_new, Fuu_new, Fdd_new
+        F0_new = (F0_ux + F0_vw) / Ny
+        F_xplus_new = (Fx0_ux1 + Fx0_vw2) / Ny
+        F_xmin_new = (Fx0_ux2 + Fx0_vw1) / Ny
+        K_y0 = (Fy0_ux + Fy0_vw) / Ny
+        F_yplus_new = K_y0.copy()
+        F_ymin_new = K_y0.copy()
 
+        # Singlet / triplet symmetry parts
+        FS_x = (Fx0_ux1 + Fx0_ux2 + Fx0_vw1 + Fx0_vw2).conj() / (2.0 * Ny)
+        FS_y = K_y0.copy()
 
-def bdg_self_consistency(H, U=None, V=None, V_prime=None,
-                         T=0, max_iter=100,
-                         atol=1e-6, rtol=1e-4,
-                         with_corr=False,
-                         mix=1.0, verbose=False):
-    if U is None:
-        U = cp.zeros(H.lattice.num_sites)
-    if V is None:
-        V = cp.zeros(H.lattice.num_sites)
-    if V_prime is None:
-        V_prime = cp.zeros(H.lattice.num_sites)
+        FT_x_plus = (Fx0_ux1 - Fx0_ux2 + Fx0_vw2 - Fx0_vw1).conj() / (2.0 * Ny)
+        FT_x_min = (Fx0_ux2 - Fx0_ux1 + Fx0_vw1 - Fx0_vw2).conj() / (2.0 * Ny)
+        FT_y_plus = np.zeros(Nx, dtype=np.complex128)
+        FT_y_min = np.zeros(Nx, dtype=np.complex128)
 
-    flag = False
-    num_sites = H.lattice.num_sites
-    F0 = cp.zeros_like(H.gap)
-    F = cp.zeros((num_sites, num_sites), dtype=cp.complex128)
-    Fuu = cp.zeros((num_sites, num_sites), dtype=cp.complex128)
-    Fdd = cp.zeros((num_sites, num_sites), dtype=cp.complex128)
+        for ky in ky_list:
+            H_k = H.build_H_k(ky)
+            H2 = H_kindep + H_k
 
-    for iteration in range(max_iter):
-        flag, F0, F, Fuu, Fdd = bdg_self_consistency_step(H, U, V, V_prime,
-                                                          T, atol, rtol, mix)
+            eigval, eigvec = la.eigh(H2)
+
+            u = eigvec[0::4, :]
+            v = eigvec[1::4, :]
+            w = eigvec[2::4, :]
+            x = eigvec[3::4, :]
+
+            Energies = np.tile(eigval, (Nx, 1))
+            f_E = fermi_dirac(Energies, temperature)
+
+            # Onsite
+            F_ux = np.einsum('nm,nm,nm->n', u, np.conj(x), (1 - f_E))
+            F_vw = np.einsum('nm,nm,nm->n', v, np.conj(w), f_E)
+
+            # x-bond pieces
+            Fx_ux1 = np.einsum('nm,nm,nm->n', u[:-1, :],
+                               np.conj(x[1:, :]), (1 - f_E[:-1, :]))
+
+            Fx_ux2 = np.einsum('nm,nm,nm->n', u[1:, :],
+                               np.conj(x[:-1, :]), (1 - f_E[1:, :]))
+
+            Fx_vw1 = np.einsum('nm,nm,nm->n', v[:-1, :],
+                               np.conj(w[1:, :]), f_E[1:, :])
+
+            Fx_vw2 = np.einsum('nm,nm,nm->n', v[1:, :],
+                               np.conj(w[:-1, :]), f_E[:-1, :])
+
+            # y-bond pieces
+            Fy_ux = np.einsum('nm,nm,nm->n', u, np.conj(x), (1 - f_E))
+            Fy_vw = np.einsum('nm,nm,nm->n', v, np.conj(w), f_E)
+
+            ep = np.exp(1j * ky)
+            em = np.exp(-1j * ky)
+
+            F0_new += (F_ux + F_vw) / Ny
+            F_xplus_new += (Fx_ux1 + Fx_vw2) / Ny
+            F_xmin_new += (Fx_ux2 + Fx_vw1) / Ny
+            F_yplus_new += (Fy_ux * ep + Fy_vw * em) / Ny
+            F_ymin_new += (Fy_ux * em + Fy_vw * ep) / Ny
+
+            # Singlet component
+            FS_x += (Fx_ux1 + Fx_ux2 + Fx_vw1 + Fx_vw2) / (2.0 * Ny)
+            FS_y += (Fy_ux + Fy_vw) * np.cos(ky) / Ny
+
+            # Triplet component
+            FT_x_plus += (Fx_ux1 - Fx_ux2 + Fx_vw2 - Fx_vw1) / (2.0 * Ny)
+            FT_x_min += (Fx_ux2 - Fx_ux1 + Fx_vw1 - Fx_vw2) / (2.0 * Ny)
+
+            FT_y_plus += 1j * (Fy_ux - Fy_vw) * np.sin(ky) / Ny
+            FT_y_min -= 1j * (Fy_ux - Fy_vw) * np.sin(ky) / Ny
+
+        # Filtering out s, d, px, py (same algebra as MATLAB)
+        F_swave = (np.r_[0, FS_x] + np.r_[FS_x, 0] + 2.0 * FS_y) / 4.0
+        F_dwave = (np.r_[0, FS_x] + np.r_[FS_x, 0] - 2.0 * FS_y) / 4.0
+        F_px = (np.r_[0, FT_x_plus] - np.r_[FT_x_min, 0]) / 2.0
+        F_py = (FT_y_plus - FT_y_min) / 2.0
+
+        # Convergence metrics
+        absdiff0 = np.linalg.norm(F0_new - F0)
+        absdiff1 = np.linalg.norm(F_xplus_new - F_xplus)
+        absdiff2 = np.linalg.norm(F_xmin_new - F_xmin)
+        absdiff3 = np.linalg.norm(F_yplus_new - F_yplus)
+        absdiff4 = np.linalg.norm(F_ymin_new - F_ymin)
+
+        # avoid divide-by-zero blow-ups
+        eps = 1e-12
+        reldiff0 = np.linalg.norm((F0_new - F0)/(F0 + eps))
+        reldiff1 = np.linalg.norm((F_xplus_new - F_xplus)/(F_xplus + eps))
+        reldiff2 = np.linalg.norm((F_xmin_new - F_xmin)/(F_xmin + eps))
+        reldiff3 = np.linalg.norm((F_yplus_new - F_yplus)/(F_yplus + eps))
+        reldiff4 = np.linalg.norm((F_ymin_new - F_ymin)/(F_ymin + eps))
+
+        c1 = ((absdiff0 < atol) and (absdiff1 < atol) and (absdiff2 < atol)
+              and (absdiff3 < atol) and (absdiff4 < atol))
+        c2 = ((reldiff0 < rtol) and (reldiff1 < rtol) and (reldiff2 < rtol)
+              and (reldiff3 < rtol) and (reldiff4 < rtol))
+
+        corr = [F0, F_xplus, F_xmin, F_yplus, F_ymin]
+        corr_new = [F0_new, F_xplus_new, F_xmin_new, F_yplus_new, F_ymin_new]
+
         if verbose:
-            print(f"Iteration {iteration+1}:\
-                \nAbs: {cp.linalg.norm(F - H.F)}\
-                \nRel: {cp.linalg.norm((F - H.F)/(F+1e-12))}\
-                \nIndex: {cp.argmax(cp.abs(F.flatten() - H.F.flatten()))}\
-                \nCorrelation: \
-                {H.F.flatten()[cp.argmax(cp.abs(F.flatten() - H.F.flatten()))]}\
-                \nCorr_new: \
-                {F.flatten()[cp.argmax(cp.abs(F.flatten() - H.F.flatten()))]}\
-                \nCorrelation_dd: \
-                    {H.Fdd.flatten()[cp.argmax(cp.abs(Fdd.flatten() - H.Fdd.flatten()))]}\
-                \nCorr_dd_new: \
-                    {Fdd.flatten()[cp.argmax(cp.abs(Fdd.flatten() - H.Fdd.flatten()))]}\
-                \nCorrelation_uu: \
-                    {H.Fuu.flatten()[cp.argmax(cp.abs(Fuu.flatten() - H.Fuu.flatten()))]}\
-                \nCorr_uu_new: \
-                    {Fuu.flatten()[cp.argmax(cp.abs(Fuu.flatten() - H.Fuu.flatten()))]}")
-            print(f"F0 bool: {arr_converged(F0, H.F0, atol, rtol)}")
-            print(f"F bool: {arr_converged(F, H.F, atol, rtol)}")
-            print(f"Fuu bool: {arr_converged(Fuu, H.Fuu, atol, rtol)}")
-            print(f"Fdd bool: {arr_converged(Fdd, H.Fdd, atol, rtol)}")
+            abs_diff = [absdiff0, absdiff1, absdiff2, absdiff3, absdiff4]
+            rel_diff = [reldiff0, reldiff1, reldiff2, reldiff3, reldiff4]
 
-        H.set_F0(F0)
-        H.set_F(F)
-        H.set_Fuu(Fuu)
-        H.set_Fdd(Fdd)
+            print('============================================')
+            print(f"Iteration {iteration + 1}:")
+            correlation_strings = [
+                    "F0", "F_xplus", "F_xmin", "F_yplus", "F_ymin"]
+            for idx in range(len(abs_diff)):
+                print(f"{correlation_strings[idx]}:")
+                print(f"Absolute error: {abs_diff[idx]}")
+                print(f"Relative error: {rel_diff[idx]}")
+                print(f"Average old: {np.mean(corr[idx])}")
+                print(f"Average: {np.mean(corr_new[idx])}")
 
-        if flag:
-            print(f"Converged after {iteration+1} iterations.")
+        F0 = F0_new.copy()
+
+        F_xplus = F_xplus_new.copy()
+        F_xmin = F_xmin_new.copy()
+        F_yplus = F_yplus_new.copy()
+        F_ymin = F_ymin_new.copy()
+
+        F_xplus = F_xplus_new.copy()
+        F_xmin = F_xmin_new.copy()
+        F_yplus = F_yplus_new.copy()
+        F_ymin = F_ymin_new.copy()
+
+        F_xplus = F_xplus_new.copy()
+        F_xmin = F_xmin_new.copy()
+        F_yplus = F_yplus_new.copy()
+        F_ymin = F_ymin_new.copy()
+        H.set_correlations(corr_new)
+
+        if c1 and c2:
+            print("==================================================")
+            print(f"Converged after {iteration+1} iterations")
+            print("==================================================")
+            converged = True
             break
 
-    if not flag:
-        print(f"Failed to converge after {iteration+1} iterations")
-    if with_corr:
-        return F0, F, Fuu, Fdd
+    if not converged:
+        print("==================================================")
+        print(f"WARNING: Failed to converge after {iteration+1} iterations")
+        print("==================================================")
 
-
-def tc_search(H, Tmin, Tmax,
-              U=0, V=0, V_prime=0,
-              F0=1e-8, F=1e-8, Fuu=1e-8, Fdd=1e-8,
-              tol=1e-6, max_iter=100):
-
-    Tc = 0
-    Tc_list = []  # store midpoint values
-    T_high_list = []
-    T_low_list = []
-    for n in range(max_iter):
-        for i in range(H.lattice.num_sites):
-            H.set_block(i, i, block)
-
-        T_half = (Tmax + Tmin) / 2
-        Tc_list.append(float(T_half))  # save current midpoint
-        T_high_list.append(float(Tmax))
-        T_low_list.append(float(Tmin))
-        gap_new = cp.mean(H.bdg_self_consistency(U, T_half, max_iter=1))
-
-        if gap_0 < gap_new:
-            Tmin = T_half
-        else:
-            Tmax = T_half
-
-        if cp.abs(T_half - Tc) < tol:
-            Tc = T_half
-            print(f"Converged after {n+1} iterations")
-            break
-        Tc = T_half
-
-    return Tc, Tc_list, T_high_list, T_low_list
+    return F_swave, F_dwave, F_px, F_py
