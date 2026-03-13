@@ -62,3 +62,13 @@ def fermi_dirac(energy, T=1e-6):
 def is_hermitian(matrix, atol=1e-8, rtol=1e-6):
     is_hermitian = np.allclose(matrix, matrix.conj().T, rtol=rtol, atol=atol)
     return is_hermitian
+
+def is_converged(corr, corr_new, atol, rtol, eps=1e-12):
+    c1 = True
+    c2 = True
+    for new, old in zip(corr,corr_new):
+        c1 = c1 and (np.linalg.norm(new - old) < atol)
+        c2 = c2 and (np.linalg.norm((new - old)/(old + eps)) < rtol)
+    
+    return c1 and c2
+

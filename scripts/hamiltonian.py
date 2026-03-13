@@ -175,8 +175,6 @@ class Hamiltonian:
         self.Fdd_ymin = np.zeros(Nx, dtype=np.complex128)
         self.Fdd_ymin[np.where(V_prime != 0)] = Fdd_init[3]
 
-        # self.set_kindep(gap0, gap1, gap2, gap1_uu, gap2_uu, gap1_dd, gap2_dd)
-
     def get_dim(self):
         return self.dim
 
