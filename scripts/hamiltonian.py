@@ -267,7 +267,7 @@ class Hamiltonian:
 
     def build_H_kindep(self):
         gap0 = self.U * self.F0
-        gap1 = self.V[1:] * self.F_xmin
+        gap1 = self.V[:-1] * self.F_xmin
         gap2 = self.V[:-1] * self.F_xplus
 
         gap1_uu = self.V_prime[1:] * self.Fuu_xmin
@@ -301,7 +301,7 @@ class Hamiltonian:
             # upper
             H[sl(i, 0), sl(i+1, 3)] = gap2[i]
             H[sl(i, 1), sl(i+1, 2)] = -gap1[i]
-            H[sl(i, 2), sl(i+1, 1)] = -np.conj(gap2[i])
+            H[sl(i, 2), sl(i+1, 1)] = np.conj(-gap2[i])
             H[sl(i, 3), sl(i+1, 0)] = np.conj(gap1[i])
 
             H[sl(i, 0), sl(i, 2)] = gap2_uu[i]
@@ -312,7 +312,7 @@ class Hamiltonian:
             # lower
             H[sl(i+1, 0), sl(i, 3)] = gap1[i]
             H[sl(i+1, 1), sl(i, 2)] = -gap2[i]
-            H[sl(i+1, 2), sl(i, 1)] = -np.conj(gap1[i])
+            H[sl(i+1, 2), sl(i, 1)] = np.conj(-gap1[i])
             H[sl(i+1, 3), sl(i, 0)] = np.conj(gap2[i])
 
             H[sl(i, 0), sl(i, 2)] = gap1_uu[i]

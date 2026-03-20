@@ -14,7 +14,7 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
     converged = False
     Ny = H.lattice.Y
     Nx = H.lattice.X
-    ky_list = np.linspace(PI / Ny, PI, Ny, endpoint=True)
+    ky_list = np.linspace(PI / Ny, PI, Ny)
 
     F0 = H.F0.copy()
     F_xplus = H.F_xplus.copy()
@@ -47,7 +47,7 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
         v_up0 = eigvec0[2::4, :]
         v_dn0 = eigvec0[3::4, :]
 
-        Energies0 = np.tile(eigval0.reshape(1, -1), (Nx, 1))
+        Energies0 = np.tile(eigval0, (Nx, 1))
         f_E0 = fermi_dirac(Energies0, temperature)
 
         if not temperature == 0:
@@ -153,7 +153,7 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             v_up = eigvec[2::4, :]  # hole ↑
             v_dn = eigvec[3::4, :]  # hole ↓
 
-            Energies = np.tile(eigval.reshape(1, -1), (Nx, 1))
+            Energies = np.tile(eigval, (Nx, 1))
             f_E = fermi_dirac(Energies, temperature)
 
             if not temperature == 0:
