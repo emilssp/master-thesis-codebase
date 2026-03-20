@@ -131,8 +131,7 @@ class Hamiltonian:
                  U=None, V=None, V_prime=None,
                  F0_init=0, F_init=np.zeros(4),
                  Fuu_init=np.zeros(4),
-                 Fdd_init=np.zeros(4),
-                 hx=None, hy=None, hz=None):
+                 Fdd_init=np.zeros(4)):
         '''
         Sets the hamiltonian parameters and initial conditions
         '''
@@ -149,21 +148,9 @@ class Hamiltonian:
             V = np.zeros(Nx)
         if V_prime is None:
             V_prime = np.zeros(Nx)
-
-        if hx is None:
-            hx = np.zeros(Nx)
-        if hy is None:
-            hy = np.zeros(Nx)
-        if hz is None:
-            hz = np.zeros(Nx)
-
         self.U = U
         self.V = V
         self.V_prime = V_prime
-
-        self.hx = hx
-        self.hy = hy
-        self.hz = hz
 
         self.F0 = np.zeros(Nx, dtype=np.complex128)
         self.F0[np.where(U != 0)] = F0_init
@@ -267,26 +254,16 @@ class Hamiltonian:
 
     def build_H_kindep(self):
         gap0 = self.U * self.F0
-        gap1 = self.V[:-1] * self.F_xmin
+        gap1 = self.V[1:] * self.F_xmin
         gap2 = self.V[:-1] * self.F_xplus
-
-        gap1_uu = self.V_prime[1:] * self.Fuu_xmin
-        gap2_uu = self.V_prime[:-1] * self.Fuu_xplus
-        gap1_dd = self.V_prime[1:] * self.Fuu_xmin
-        gap2_dd = self.V_prime[:-1] * self.Fuu_xplus
 
         H = np.zeros((self.dim, self.dim), dtype=np.complex128)
 
         for i in range(self.lattice.X):
-            H[sl(i, 0), sl(i, 0)] = -self.mu[i] + self.hz[i]
-            H[sl(i, 1), sl(i, 1)] = -self.mu[i] - self.hz[i]
-            H[sl(i, 2), sl(i, 2)] = self.mu[i] - self.hz[i]
-            H[sl(i, 3), sl(i, 3)] = self.mu[i] + self.hz[i]
-
-            H[sl(i, 0), sl(i, 1)] = self.hx[i] + 1j * self.hy[i]
-            H[sl(i, 1), sl(i, 0)] = self.hx[i] - 1j * self.hy[i]
-            H[sl(i, 2), sl(i, 3)] = -self.hx[i] - 1j * self.hy[i]
-            H[sl(i, 3), sl(i, 2)] = -self.hx[i] + 1j * self.hy[i]
+            H[sl(i, 0), sl(i, 0)] = -self.mu[i]
+            H[sl(i, 1), sl(i, 1)] = -self.mu[i]
+            H[sl(i, 2), sl(i, 2)] = self.mu[i]
+            H[sl(i, 3), sl(i, 3)] = self.mu[i]
 
             H[sl(i, 0), sl(i, 3)] = gap0[i]
             H[sl(i, 1), sl(i, 2)] = -gap0[i]
@@ -301,25 +278,14 @@ class Hamiltonian:
             # upper
             H[sl(i, 0), sl(i+1, 3)] = gap2[i]
             H[sl(i, 1), sl(i+1, 2)] = -gap1[i]
-            H[sl(i, 2), sl(i+1, 1)] = np.conj(-gap2[i])
+            H[sl(i, 2), sl(i+1, 1)] = -np.conj(gap2[i])
             H[sl(i, 3), sl(i+1, 0)] = np.conj(gap1[i])
-
-            H[sl(i, 0), sl(i, 2)] = gap2_uu[i]
-            H[sl(i, 1), sl(i, 3)] = gap2_dd[i]
-            H[sl(i, 2), sl(i, 0)] = np.conj(gap1_uu[i])
-            H[sl(i, 3), sl(i, 1)] = np.conj(gap1_dd[i])
 
             # lower
             H[sl(i+1, 0), sl(i, 3)] = gap1[i]
             H[sl(i+1, 1), sl(i, 2)] = -gap2[i]
-            H[sl(i+1, 2), sl(i, 1)] = np.conj(-gap1[i])
+            H[sl(i+1, 2), sl(i, 1)] = -np.conj(gap1[i])
             H[sl(i+1, 3), sl(i, 0)] = np.conj(gap2[i])
-
-            H[sl(i, 0), sl(i, 2)] = gap1_uu[i]
-            H[sl(i, 1), sl(i, 3)] = gap1_dd[i]
-            H[sl(i, 2), sl(i, 0)] = np.conj(gap2_uu[i])
-            H[sl(i, 3), sl(i, 1)] = np.conj(gap2_dd[i])
-
         return H
 
     def build_H_k(self, k):
@@ -332,8 +298,8 @@ class Hamiltonian:
         # y-pairing with phase
         gap1 = self.V * (self.F_yplus * em + self.F_ymin * ep)
         gap2 = -self.V * (self.F_yplus * ep + self.F_ymin * em)
-        gap_uu = -1j * self.V_prime * self.Fuu_yplus * np.sin(k)
-        gap_dd = -1j * self.V_prime * self.Fdd_yplus * np.sin(k)
+        # gap_uu = 1j * self.V_prime * self.Fuu_yplus * np.sin(k)
+        # gap_dd = 1j * self.V_prime * self.Fdd_yplus * np.sin(k)
 
         for i in range(self.lattice.X):
             # dispersion
@@ -347,10 +313,10 @@ class Hamiltonian:
             H2[sl(i, 2), sl(i, 1)] = np.conj(gap2[i])
             H2[sl(i, 3), sl(i, 0)] = np.conj(gap1[i])
 
-            H2[sl(i, 0), sl(i, 2)] = gap_uu[i]
-            H2[sl(i, 1), sl(i, 3)] = gap_dd[i]
-            H2[sl(i, 2), sl(i, 0)] = np.conj(gap_uu[i])  # TODO: Check sign
-            H2[sl(i, 3), sl(i, 1)] = np.conj(gap_dd[i])
+            # H2[sl(i, 0), sl(i, 2)] = np.conj(gap_uu)
+            # H2[sl(i, 1), sl(i, 3)] = np.conj(gap_dd)
+            # H2[sl(i, 2), sl(i, 0)] = np.conj(gap_uu)
+            # H2[sl(i, 3), sl(i, 1)] = np.conj(gap_dd)
 
         return H2
 
@@ -362,15 +328,15 @@ class Hamiltonian:
         self.F_yplus = corr[3].copy()
         self.F_ymin = corr[4].copy()
 
-        self.Fuu_xplus = corr[5].copy()
-        self.Fuu_xmin = corr[6].copy()
-        self.Fuu_yplus = corr[7].copy()
-        self.Fuu_ymin = corr[8].copy()
+        # self.Fuu_xplus = corr[5].copy()
+        # self.Fuu_xmin = corr[6].copy()
+        # self.Fuu_yplus = corr[7].copy()
+        # self.Fuu_ymin = corr[8].copy()
 
-        self.Fdd_xplus = corr[9].copy()
-        self.Fdd_xmin = corr[10].copy()
-        self.Fdd_yplus = corr[11].copy()
-        self.Fdd_ymin = corr[12].copy()
+        # self.Fdd_xplus = corr[9].copy()
+        # self.Fdd_xmin = corr[10].copy()
+        # self.Fdd_yplus = corr[11].copy()
+        # self.Fdd_ymin = corr[12].copy()
 
     def free_energy_const_term(self):
         E_S = 0
