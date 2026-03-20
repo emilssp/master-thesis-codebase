@@ -1,6 +1,6 @@
 # Custom
 cluster/data/*
-figures/*
+# figures/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
