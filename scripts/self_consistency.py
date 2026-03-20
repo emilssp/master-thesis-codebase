@@ -14,7 +14,7 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
     converged = False
     Ny = H.lattice.Y
     Nx = H.lattice.X
-    ky_list = np.linspace(PI / Ny, PI, Ny, endpoint=True)
+    ky_list = np.linspace(PI / Ny, PI, Ny, endpoint=False)
 
     F0 = H.F0.copy()
     F_xplus = H.F_xplus.copy()

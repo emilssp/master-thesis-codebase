@@ -131,7 +131,8 @@ class Hamiltonian:
                  U=None, V=None, V_prime=None,
                  F0_init=0, F_init=np.zeros(4),
                  Fuu_init=np.zeros(4),
-                 Fdd_init=np.zeros(4)):
+                 Fdd_init=np.zeros(4),
+                 hx=None, hy=None, hz=None):
         '''
         Sets the hamiltonian parameters and initial conditions
         '''
@@ -148,9 +149,21 @@ class Hamiltonian:
             V = np.zeros(Nx)
         if V_prime is None:
             V_prime = np.zeros(Nx)
+
+        if hx is None:
+            hx = np.zeros(Nx)
+        if hy is None:
+            hy = np.zeros(Nx)
+        if hz is None:
+            hz = np.zeros(Nx)
+
         self.U = U
         self.V = V
         self.V_prime = V_prime
+
+        self.hx = hx
+        self.hy = hy
+        self.hz = hz
 
         self.F0 = np.zeros(Nx, dtype=np.complex128)
         self.F0[np.where(U != 0)] = F0_init
@@ -265,10 +278,15 @@ class Hamiltonian:
         H = np.zeros((self.dim, self.dim), dtype=np.complex128)
 
         for i in range(self.lattice.X):
-            H[sl(i, 0), sl(i, 0)] = -self.mu[i]
-            H[sl(i, 1), sl(i, 1)] = -self.mu[i]
-            H[sl(i, 2), sl(i, 2)] = self.mu[i]
-            H[sl(i, 3), sl(i, 3)] = self.mu[i]
+            H[sl(i, 0), sl(i, 0)] = -self.mu[i] + self.hz[i]
+            H[sl(i, 1), sl(i, 1)] = -self.mu[i] - self.hz[i]
+            H[sl(i, 2), sl(i, 2)] = self.mu[i] - self.hz[i]
+            H[sl(i, 3), sl(i, 3)] = self.mu[i] + self.hz[i]
+
+            H[sl(i, 0), sl(i, 1)] = self.hx[i] + 1j * self.hy[i]
+            H[sl(i, 1), sl(i, 0)] = self.hx[i] - 1j * self.hy[i]
+            H[sl(i, 2), sl(i, 3)] = -self.hx[i] - 1j * self.hy[i]
+            H[sl(i, 3), sl(i, 2)] = -self.hx[i] + 1j * self.hy[i]
 
             H[sl(i, 0), sl(i, 3)] = gap0[i]
             H[sl(i, 1), sl(i, 2)] = -gap0[i]
