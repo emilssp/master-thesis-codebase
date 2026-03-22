@@ -1,5 +1,5 @@
 import numpy as np
-
+from scipy.special import expit
 from .constants import s0, s2, PI
 
 
@@ -54,8 +54,7 @@ def lorentzian(x, eta=1e-6):
 
 def fermi_dirac(energy, T=1e-6):
     x = energy / T
-    return np.where(x > 50, 0.0,
-                    np.where(x < -50, 1.0, 1.0 / (np.exp(x) + 1.0)))
+    return expit(-x)
 
 
 def is_hermitian(matrix, atol=1e-8, rtol=1e-6):
