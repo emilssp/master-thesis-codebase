@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=bdg_phase
+#SBATCH --job-name=NP
 #SBATCH --output=logs/NP-%A_%a.out
 #SBATCH --error=logs/NP-%A_%a.err
 #SBATCH --array=0-170

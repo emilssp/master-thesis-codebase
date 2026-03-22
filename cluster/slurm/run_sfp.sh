@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=bdg_phase
+#SBATCH --job-name=SFP
 #SBATCH --output=logs/SFP-%A_%a.out
 #SBATCH --error=logs/SFP-%A_%a.err
 #SBATCH --array=0-231
