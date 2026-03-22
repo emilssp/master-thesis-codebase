@@ -267,7 +267,7 @@ class Hamiltonian:
 
     def build_H_kindep(self):
         gap0 = self.U * self.F0
-        gap1 = self.V[:-1] * self.F_xmin
+        gap1 = self.V[1:] * self.F_xmin
         gap2 = self.V[:-1] * self.F_xplus
 
         gap1_uu = self.V_prime[1:] * self.Fuu_xmin
@@ -278,10 +278,10 @@ class Hamiltonian:
         H = np.zeros((self.dim, self.dim), dtype=np.complex128)
 
         for i in range(self.lattice.X):
-            H[sl(i, 0), sl(i, 0)] = -self.mu[i] + self.hz[i]
-            H[sl(i, 1), sl(i, 1)] = -self.mu[i] - self.hz[i]
-            H[sl(i, 2), sl(i, 2)] = self.mu[i] - self.hz[i]
-            H[sl(i, 3), sl(i, 3)] = self.mu[i] + self.hz[i]
+            H[sl(i, 0), sl(i, 0)] = -self.mu[i] - self.hz[i]
+            H[sl(i, 1), sl(i, 1)] = -self.mu[i] + self.hz[i]
+            H[sl(i, 2), sl(i, 2)] = self.mu[i] + self.hz[i]
+            H[sl(i, 3), sl(i, 3)] = self.mu[i] - self.hz[i]
 
             H[sl(i, 0), sl(i, 1)] = self.hx[i] + 1j * self.hy[i]
             H[sl(i, 1), sl(i, 0)] = self.hx[i] - 1j * self.hy[i]
