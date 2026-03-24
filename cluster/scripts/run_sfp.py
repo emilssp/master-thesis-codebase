@@ -54,7 +54,7 @@ def main():
     H = Hamiltonian(
         t, mu, lattice,
         U=U, V_prime=V_prime, V=V,
-        F0_init=0.1,
+        F0_init=0.1, hz=hz,
         F_init=[0.1, -0.1, 0.1j, -0.1j],
     )
 
@@ -75,6 +75,10 @@ def main():
         F_px=F_px[int(widthS+widthF+widthP/2)],
         F_py=F_py[int(widthS+widthF+widthP/2)],
     )
+
+    print("Temperature:", temp)
+    print("F_px:", F_px[int(widthS+widthF+widthP/2)])
+    print("F_py:", F_py[int(widthS+widthF+widthP/2)])
 
     # save parameters for inspection
     if idx == 1:
