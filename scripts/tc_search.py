@@ -5,8 +5,9 @@ from .self_consistency import bdg_sc
 
 def tc_search(H: Hamiltonian, gap_0,
               Tmin, Tmax, symmetry,
+              U=None,
               tol=1e-6, max_iter=100):
-
+    H = Hamiltonian()
     Tc = 0
     Tc_list = []  # store midpoint values
     T_high_list = []

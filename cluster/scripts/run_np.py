@@ -27,7 +27,7 @@ def main():
     V0 = 1.5 * t
     V = V0 * np.ones(lattice.X)
     V[:widthN] = 0
-    V[widthN-1] = V0/2
+    V[widthN] = V0/2
 
     temps = np.concatenate([
         np.arange(0.001, 0.009 + 1e-12, 0.001),
@@ -40,8 +40,8 @@ def main():
 
     print(f"Running job {idx} out of {len(temps)}")
 
-    U = np.zeros(lattice.X)
-    V_prime = np.zeros(lattice.X)
+    U = None
+    V_prime = None
     V0 = 1.5 * t
     V = V0 * np.ones(lattice.X)
 
@@ -62,7 +62,7 @@ def main():
         f"data/NP/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
-        F0=F0[int(widthN+widthP/2)],
+        F0=F0[int(widthN/2)],
         F_swave=F_swave[int(widthN+widthP/2)],
         F_dwave=F_dwave[int(widthN+widthP/2)],
         F_px=F_px[int(widthN+widthP/2)],
