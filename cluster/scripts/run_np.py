@@ -57,11 +57,11 @@ def main():
         f"data/NP/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
-        F0=F0[int(widthN/2)],
-        F_swave=F_swave[int(widthN+widthP/2)],
-        F_dwave=F_dwave[int(widthN+widthP/2)],
-        F_px=F_px[int(widthN+widthP/2)],
-        F_py=F_py[int(widthN+widthP/2)],
+        F0=F0[int(widthN/2)-1],
+        F_swave=F_swave[int(widthN+widthP/2)-1],
+        F_dwave=F_dwave[int(widthN+widthP/2)-1],
+        F_px=F_px[int(widthN+widthP/2)-1],
+        F_py=F_py[int(widthN+widthP/2)-1],
     )
 
     # save parameters for inspection

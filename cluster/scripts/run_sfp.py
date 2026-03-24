@@ -69,16 +69,16 @@ def main():
         f"data/SFP/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
-        F0=F0[int(widthS/2)],
-        F_swave=F_swave[int(widthS+widthF+widthP/2)],
-        F_dwave=F_dwave[int(widthS+widthF+widthP/2)],
-        F_px=F_px[int(widthS+widthF+widthP/2)],
-        F_py=F_py[int(widthS+widthF+widthP/2)],
+        F0=F0[int(widthS/2)-1],
+        F_swave=F_swave[int(widthS+widthF+widthP/2)-1],
+        F_dwave=F_dwave[int(widthS+widthF+widthP/2)-1],
+        F_px=F_px[int(widthS+widthF+widthP/2)-1],
+        F_py=F_py[int(widthS+widthF+widthP/2)-1],
     )
 
     print("Temperature:", temp)
-    print("F_px:", F_px[int(widthS+widthF+widthP/2)])
-    print("F_py:", F_py[int(widthS+widthF+widthP/2)])
+    print("F_px:", F_px[int(widthS+widthF+widthP/2)-1])
+    print("F_py:", F_py[int(widthS+widthF+widthP/2)-1])
 
     # save parameters for inspection
     if idx == 1:
