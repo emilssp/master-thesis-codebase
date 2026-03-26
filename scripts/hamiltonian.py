@@ -237,15 +237,15 @@ class Hamiltonian:
         H = np.zeros((self.dim, self.dim), dtype=np.complex128)
 
         for i in range(self.lattice.X):
-            H[sl(i, 0), sl(i, 0)] = -self.mu[i] - self.hz[i]
-            H[sl(i, 1), sl(i, 1)] = -self.mu[i] + self.hz[i]
-            H[sl(i, 2), sl(i, 2)] = self.mu[i] + self.hz[i]
-            H[sl(i, 3), sl(i, 3)] = self.mu[i] - self.hz[i]
+            H[sl(i, 0), sl(i, 0)] = -self.mu[i] + self.hz[i]
+            H[sl(i, 1), sl(i, 1)] = -self.mu[i] - self.hz[i]
+            H[sl(i, 2), sl(i, 2)] = self.mu[i] - self.hz[i]
+            H[sl(i, 3), sl(i, 3)] = self.mu[i] + self.hz[i]
 
-            H[sl(i, 0), sl(i, 1)] = -self.hx[i] - 1j * self.hy[i]
-            H[sl(i, 1), sl(i, 0)] = -self.hx[i] + 1j * self.hy[i]
-            H[sl(i, 2), sl(i, 3)] = self.hx[i] + 1j * self.hy[i]
-            H[sl(i, 3), sl(i, 2)] = self.hx[i] - 1j * self.hy[i]
+            H[sl(i, 0), sl(i, 1)] = self.hx[i] - 1j * self.hy[i]
+            H[sl(i, 1), sl(i, 0)] = self.hx[i] + 1j * self.hy[i]
+            H[sl(i, 2), sl(i, 3)] = -self.hx[i] - 1j * self.hy[i]
+            H[sl(i, 3), sl(i, 2)] = -self.hx[i] + 1j * self.hy[i]
 
             H[sl(i, 0), sl(i, 3)] = gap0[i]
             H[sl(i, 1), sl(i, 2)] = -gap0[i]
