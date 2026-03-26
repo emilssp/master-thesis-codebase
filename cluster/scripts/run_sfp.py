@@ -33,10 +33,12 @@ def main():
     U0 = 5.2 * t
     U = U0 * np.ones(lattice.X)
     U[widthS:] = 0
+    U[widthS-1] = U0/2
 
     V0 = 1.5 * t
     V = V0 * np.ones(lattice.X)
     V[:widthF+widthS] = 0
+    V[widthF+widthS-1] = V0/2
 
     V_prime = None
 

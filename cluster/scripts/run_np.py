@@ -12,9 +12,10 @@ def main():
     widthN = 5
     widthP = 10
 
-    X, Y = widthN+widthP, 200
+    X, Y = widthN+widthP, 100
     lattice = Lattice(X, Y)
     t = 1
+
     muN = 1.2 * t
     muP = 1.8 * t
     mu = np.zeros(lattice.X)
@@ -27,7 +28,11 @@ def main():
     V0 = 1.5 * t
     V = V0 * np.ones(lattice.X)
     V[:widthN] = 0
-    V[widthN] = V0/2
+    V[widthN-1] = V0/2
+
+    H = Hamiltonian(t, mu, lattice,
+                    U=U, V_prime=V_prime, V=V,
+                    F_init=[0.1, -0.1, 0.1j, -0.1j])
 
     temps = np.concatenate([
         np.arange(0.001, 0.009 + 1e-12, 0.001),
@@ -39,12 +44,6 @@ def main():
     temp = temps[idx]
 
     print(f"Running job {idx} out of {len(temps)}")
-
-    H = Hamiltonian(
-        t, mu, lattice,
-        U=U, V_prime=V_prime, V=V,
-        F_init=[0.1, -0.1, 0.1j, -0.1j]
-    )
 
     # Adjust to your actual bdg_sc output
     F_swave, F_dwave, F_px, F_py = bdg_sc(
