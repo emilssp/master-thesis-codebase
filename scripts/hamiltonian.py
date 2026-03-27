@@ -26,7 +26,9 @@ class Hamiltonian:
                  Fdd_init=np.zeros(4),
                  hx=None, hy=None, hz=None):
         '''
-        Sets the hamiltonian parameters and initial conditions
+        Class that stores the Hamiltonian parameters and initial conditions,
+        as well as functions constructing the Hamiltonian and extracting re-
+        levant quantities.
         '''
         self.t = t
         self.mu = mu
