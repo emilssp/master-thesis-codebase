@@ -14,29 +14,27 @@ def main():
     t = 1.0
     lattice = Lattice(X, Y)
 
-    mu = 1.8 * t * np.ones(lattice.X)
+    mu = 0.5 * t * np.ones(lattice.X)
 
     temps = np.concatenate([
-        np.arange(0.001, 0.009 + 1e-12, 0.001),
-        np.arange(0.01, 0.81 + 1e-12, 0.1),
-        np.arange(0.82, 1.00 + 1e-12, 0.001),
-        np.arange(1.01, 1.2 + 1e-12, 0.01)
+        np.arange(0.001, 0.020 + 1e-12, 0.001),
+        np.arange(0.021, 0.180 + 1e-12, 0.005),
+        np.arange(0.181, 0.200 + 1e-12, 0.001),
+        np.arange(0.201, 0.250 + 1e-12, 0.0005),
     ])
-
     temp = temps[idx]
 
     print(f"Running job {idx} out of {len(temps)}")
 
-    U0 = 5.2 * t / 2
-    U = U0 * np.ones(lattice.X)
-
-    V_prime = None
-    V = None
+    U = np.zeros(lattice.X)
+    V_prime = np.zeros(lattice.X)
+    V0 = 1.5 * t / 2  # add factor to check Kuboki
+    V = V0 * np.ones(lattice.X)
 
     H = Hamiltonian(
         t, mu, lattice,
         U=U, V_prime=V_prime, V=V,
-        F0_init=0.1
+        F_init=[0.1, 0.1, -0.1, -0.1],
     )
 
     # Adjust to your actual bdg_sc output
@@ -45,12 +43,16 @@ def main():
         rtol=1e-3, atol=1e-6
     )
     F0 = H.F0
-    os.makedirs("data/bulkS", exist_ok=True)
+    os.makedirs("data/bulkD", exist_ok=True)
     np.savez(
-        f"data/bulkS/temp_{idx:04d}.npz",
+        f"data/bulkD/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
-        F0=F0[29]  # smiddle of the swave region
+        F0=F0[int(X/2-1)],
+        F_swave=F_swave[int(X/2-1)],
+        F_dwave=F_dwave[int(X/2-1)],
+        F_px=F_px[int(X/2-1)],
+        F_py=F_py[int(X/2-1)],
     )
 
 

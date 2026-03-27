@@ -2,7 +2,7 @@
 #SBATCH --job-name=NP
 #SBATCH --output=logs/NP-%A_%a.out
 #SBATCH --error=logs/NP-%A_%a.err
-#SBATCH --array=0-263
+#SBATCH --array=0-216
 #SBATCH --cpus-per-task=4
 #SBATCH --time=24:00:00
 #SBATCH --partition=habanaq

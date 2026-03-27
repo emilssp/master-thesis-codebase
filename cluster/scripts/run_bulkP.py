@@ -10,7 +10,7 @@ from utils.self_consistency import bdg_sc
 def main():
     idx = int(sys.argv[1])
 
-    X, Y = 10, 100
+    X, Y = 60, 60
     t = 1.0
     lattice = Lattice(X, Y)
 
@@ -20,8 +20,6 @@ def main():
         np.arange(0.001, 0.020 + 1e-12, 0.001),
         np.arange(0.021, 0.040 + 1e-12, 0.0002),
         np.arange(0.041, 0.061 + 1e-12, 0.0002),
-        np.arange(0.062, 0.080 + 1e-12, 0.0005),
-        np.arange(0.081, 0.100 + 1e-12, 0.002)
     ])
 
     temp = temps[idx]
