@@ -1,10 +1,22 @@
 import numpy as np
 import scipy.linalg as la
 from scipy import special
+from collections import namedtuple
 
 from .constants import PI
-from .hamiltonian import Hamiltonian
+from .Hamiltonian import Hamiltonian
 from .utils import fermi_dirac, is_converged
+
+
+Corr = namedtuple(
+    "Corr",
+    [
+        "F0",
+        "F_xplus", "F_xmin", "F_yplus", "F_ymin",
+        "Fuu_xplus", "Fuu_xmin", "Fuu_yplus", "Fuu_ymin",
+        "Fdd_xplus", "Fdd_xmin", "Fdd_yplus", "Fdd_ymin",
+    ]
+)
 
 
 def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
@@ -255,16 +267,18 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
         F_px = (np.r_[0, FT_x_plus] - np.r_[FT_x_min, 0]) / 2.0
         F_py = (FT_y_plus - FT_y_min) / 2.0
 
-        corr = [
-            F0, F_xplus, F_xmin, F_yplus, F_ymin,
+        corr = Corr(
+            F0,
+            F_xplus, F_xmin, F_yplus, F_ymin,
             Fuu_xplus, Fuu_xmin, Fuu_yplus, Fuu_ymin,
-            Fdd_xplus, Fdd_xmin, Fdd_yplus, Fdd_ymin
-        ]
-        corr_new = [
-            F0_new, F_xplus_new, F_xmin_new, F_yplus_new, F_ymin_new,
+            Fdd_xplus, Fdd_xmin, Fdd_yplus, Fdd_ymin,
+        )
+        corr_new = Corr(
+            F0_new,
+            F_xplus_new, F_xmin_new, F_yplus_new, F_ymin_new,
             Fuu_xplus_new, Fuu_xmin_new, Fuu_yplus_new, Fuu_ymin_new,
             Fdd_xplus_new, Fdd_xmin_new, Fdd_yplus_new, Fdd_ymin_new
-        ]
+        )
 
         if verbose:
             print('============================================')
