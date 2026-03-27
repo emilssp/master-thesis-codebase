@@ -10,34 +10,33 @@ from utils.self_consistency import bdg_sc
 def main():
     idx = int(sys.argv[1])
 
-    X, Y = 10, 100
+    X, Y = 15, 100
     t = 1.0
     lattice = Lattice(X, Y)
 
     mu = 1.8 * t * np.ones(lattice.X)
 
     temps = np.concatenate([
-        np.arange(0.001, 0.020 + 1e-12, 0.001),
-        np.arange(0.021, 0.040 + 1e-12, 0.0002),
-        np.arange(0.041, 0.061 + 1e-12, 0.0002),
-        np.arange(0.062, 0.080 + 1e-12, 0.0005),
-        np.arange(0.081, 0.100 + 1e-12, 0.002)
+        np.arange(0.001, 0.009 + 1e-12, 0.001),
+        np.arange(0.01, 0.81 + 1e-12, 0.1),
+        np.arange(0.82, 1.00 + 1e-12, 0.001),
+        np.arange(1.01, 1.2 + 1e-12, 0.01)
     ])
 
     temp = temps[idx]
 
     print(f"Running job {idx} out of {len(temps)}")
 
-    U = np.zeros(lattice.X)
-    V_prime = np.zeros(lattice.X)
-    V0 = 1.5 * t / 2  # add factor to check Kuboki
-    V = V0 * np.ones(lattice.X)
+    U0 = 5.2 * t / 2
+    U = U0 * np.ones(lattice.X)
+
+    V_prime = None
+    V = None
 
     H = Hamiltonian(
         t, mu, lattice,
         U=U, V_prime=V_prime, V=V,
-        F0_init=0.0,
-        F_init=[0.1, -0.1, 0.1j, -0.1j],
+        F0_init=0.1
     )
 
     # Adjust to your actual bdg_sc output
@@ -46,16 +45,12 @@ def main():
         rtol=1e-3, atol=1e-6
     )
     F0 = H.F0
-    os.makedirs("data/bulkP", exist_ok=True)
+    os.makedirs("data/bulkS", exist_ok=True)
     np.savez(
-        f"data/bulkP/temp_{idx:04d}.npz",
+        f"data/bulkS/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
-        F0=F0[int(X/2-1)],
-        F_swave=F_swave[int(X/2-1)],
-        F_dwave=F_dwave[int(X/2-1)],
-        F_px=F_px[int(X/2-1)],
-        F_py=F_py[int(X/2-1)],
+        F0=F0[7]  # smiddle of the swave region
     )
 
 
