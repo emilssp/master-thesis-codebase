@@ -2,7 +2,8 @@ import os
 import sys
 import numpy as np
 
-from utils.hamiltonian import Lattice, Hamiltonian
+from utils.Hamiltonian import Hamiltonian
+from utils.Lattice import Lattice
 from utils.self_consistency import bdg_sc
 
 

@@ -4,7 +4,7 @@ from scipy import special
 from collections import namedtuple
 
 from .constants import PI
-from .hamiltonian import Hamiltonian
+from .Hamiltonian import Hamiltonian
 from .utils import fermi_dirac, is_converged
 
 
