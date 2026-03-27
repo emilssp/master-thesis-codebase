@@ -31,12 +31,12 @@ def main():
     hz = np.zeros_like(mu)
     hz[widthS:widthS + widthF] = hz0
 
-    U0 = 5.2 * t
+    U0 = 5.2 * t / 2
     U = U0 * np.ones(lattice.X)
     U[widthS:] = 0
     U[widthS-1] = U0/2
 
-    V0 = 1.5 * t
+    V0 = 1.5 * t / 2
     V = V0 * np.ones(lattice.X)
     V[:widthF+widthS] = 0
     V[widthF+widthS-1] = V0/2
@@ -44,11 +44,11 @@ def main():
     V_prime = None
 
     temps = np.concatenate([
-        np.arange(0.001, 0.009 + 1e-12, 0.001),
-        np.arange(0.01, 0.20 + 1e-12, 0.01),
-        np.arange(0.21, 0.31 + 1e-12, 0.005),
-        np.arange(0.32, 0.41 + 1e-12, 0.001),
-        np.arange(0.42, 0.60 + 1e-12, 0.002)
+        np.arange(0.001, 0.020 + 1e-12, 0.001),
+        np.arange(0.021, 0.040 + 1e-12, 0.0002),
+        np.arange(0.041, 0.061 + 1e-12, 0.0002),
+        np.arange(0.062, 0.080 + 1e-12, 0.0005),
+        np.arange(0.081, 0.100 + 1e-12, 0.002)
     ])
     temp = temps[idx]
 
