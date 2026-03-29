@@ -28,60 +28,57 @@ def build_bdg_hamiltonian(kx, ky, t, mu, h,
 
     eps = -2.0 * t * np.cos(kx) - 2.0 * t * np.cos(ky) - mu
 
-    epx = np.exp(1j * kx)
     emx = np.exp(-1j * kx)
-    epy = np.exp(1j * ky)
+    epx = np.exp(1j * kx)
     emy = np.exp(-1j * ky)
+    epy = np.exp(1j * ky)
 
     F_xplus = F[0]
     F_xmin = F[1]
     F_yplus = F[2]
     F_ymin = F[3]
 
-    Fuu_xplus = Fuu[0]
-    Fuu_xmin = Fuu[1]
-    Fuu_yplus = Fuu[2]
-    Fuu_ymin = Fuu[3]
+    Fuu_x = Fuu[0]
+    Fuu_y = Fuu[2]
 
-    Fdd_xplus = Fdd[0]
-    Fdd_xmin = Fdd[1]
-    Fdd_yplus = Fdd[2]
-    Fdd_ymin = Fdd[3]
+    Fdd_x = Fdd[0]
+    Fdd_y = Fdd[2]
 
     Delta0 = U * F0
 
-    Fk = V * (F_xplus * epx + F_xmin * emx +
-              F_yplus * epy + F_ymin * emy)
+    Fk1 = V * (F_xplus * emx + F_xmin * epx +
+               F_yplus * emy + F_ymin * epy)
+    Fk2 = -V * (F_xplus * epx + F_xmin * emx +
+                F_yplus * epy + F_ymin * emy)
+    Fk3 = -V * (F_xplus.conj() * emx + F_xmin.conj() * epx +
+                F_yplus.conj() * epy + F_ymin.conj() * emy)
+    Fk4 = np.conj(Fk1)
 
-    Fk_min = V * (F_xplus * emx + F_xmin * epx +
-                  F_yplus * emy + F_ymin * epy)
+    Fuu_k = -2j * V_prime * (Fuu_x * np.sin(kx) +
+                             Fuu_y * np.sin(ky))
 
-    Fuu_k = V_prime * (Fuu_xplus * epx + Fuu_xmin * emx +
-                       Fuu_yplus * epy + Fuu_ymin * emy)
-
-    Fdd_k = V_prime * (Fdd_xplus * epx + Fdd_xmin * emx +
-                       Fdd_yplus * epy + Fdd_ymin * emy)
+    Fdd_k = -2j * V_prime * (Fdd_x * np.sin(kx) +
+                             Fdd_y * np.sin(ky))
 
     H = np.zeros((4, 4), dtype=np.complex128)
 
     H[0, 0] = eps + hz
     H[0, 1] = hx - 1j * hy
     H[0, 2] = Fuu_k
-    H[0, 3] = Delta0 + V * (F_xplus * emx + F_xmin * epx +
-                            F_yplus * emy + F_ymin * epy)
+    H[0, 3] = Delta0 + Fk1
 
     H[1, 0] = hx + 1j * hy
     H[1, 1] = eps - hz
-    H[1, 2] = -(Delta0 + Fk_min)
+    H[1, 2] = -Delta0 + Fk2
     H[1, 3] = Fdd_k
 
-    H[2, 0] = np.conjugate(Fuu_k)
-    H[2, 1] = -np.conjugate(Delta0 + Fk_min)
+    H[2, 0] = np.conj(Fuu_k)
+    H[2, 1] = -np.conj(Delta0) + Fk3
     H[2, 2] = -eps - hz
     H[2, 3] = -(hx + 1j * hy)
 
-    H[3, 0] = np.conjugate(Delta0 + Fk)
-    H[3, 1] = np.conjugate(Fdd_k)
+    H[3, 0] = np.conj(Delta0) + Fk4
+    H[3, 1] = np.conj(Fdd_k)
     H[3, 2] = -(hx - 1j * hy)
     H[3, 3] = -eps + hz
 
