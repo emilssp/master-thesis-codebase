@@ -3,7 +3,7 @@ import scipy.linalg as la
 from scipy import special
 from collections import namedtuple
 
-from utils import fermi_dirac, is_converged
+from utils import fermi_dirac, is_converged, is_hermitian
 
 PI = np.pi
 
@@ -82,6 +82,8 @@ def build_bdg_hamiltonian(kx, ky, t, mu, h,
     H[3, 2] = -(hx - 1j * hy)
     H[3, 3] = -eps + hz
 
+    if not is_hermitian(H):
+        raise ValueError("Hamiltonian is not hermitian")
     return H
 
 
@@ -276,6 +278,24 @@ def bdg_sc_full_k(t, mu, Nx, Ny, temperature=0, h=np.zeros(3),
         corr = corr_new
         free_energy = free
 
+    E_S = 0
+    E_S += np.sum(U * np.abs(F0)**2)
+
+    E_S += np.sum(V * np.abs(F[0])**2) * Nk
+    E_S += np.sum(V * np.abs(F[1])**2) * Nk
+    E_S += np.sum(V * np.abs(F[2])**2) * Nk
+    E_S += np.sum(V * np.abs(F[3])**2) * Nk
+
+    E_S += np.sum(V_prime * np.abs(Fuu[0])**2) * Nk
+    E_S += np.sum(V_prime * np.abs(Fuu[1])**2) * Nk
+    E_S += np.sum(V_prime * np.abs(Fuu[2])**2) * Nk
+    E_S += np.sum(V_prime * np.abs(Fuu[3])**2) * Nk
+
+    E_S += np.sum(V_prime * np.abs(Fdd[0])**2) * Nk
+    E_S += np.sum(V_prime * np.abs(Fdd[1])**2) * Nk
+    E_S += np.sum(V_prime * np.abs(Fdd[2])**2) * Nk
+    E_S += np.sum(V_prime * np.abs(Fdd[3])**2) * Nk
+    free_energy += E_S
     if not converged:
         print("==================================================")
         print(f"WARNING: Failed to converge after {maxiter} iterations")
