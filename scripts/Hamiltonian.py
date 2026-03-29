@@ -385,20 +385,13 @@ class Hamiltonian:
         dos += np.sum(parts, axis=0)
         return dos
 
-        # def work(k):
-
-        #     H_k = self.build_H_k(k)
-        #     eps = la.eigvalsh(H_kindep + H_k)
-
-        #     internal_energy = - 0.5 * np.sum(eps)
-
-        #     if temperature == 0:
-        #         S = 0
-        #     else:
-        #         beta = 1/temperature
-        #         S = np.sum(special.softplus(-eps*beta))/beta
-
-        #     return internal_energy - S
-
-        # with ThreadPoolExecutor(max_workers=os.cpu_count()) as ex:
-        #     parts = list(ex.map(work, ky_list))
+    def spectrum_for_state(self):
+        Nx = self.lattice.X
+        Ny = self.lattice.Y
+        ky_vals = np.linspace(0, 2 * np.pi, Ny)
+        eigvals = np.zeros((Ny, 4*Nx))
+        for idx, ky in enumerate(ky_vals):
+            H = self.build_H_kindep() + self.build_H_k(ky)
+            w = la.eigvalsh(H)
+            eigvals[idx, :] = np.sort(w)
+        return ky_vals, eigvals
