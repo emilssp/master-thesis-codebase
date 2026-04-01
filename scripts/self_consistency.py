@@ -21,7 +21,7 @@ Corr = namedtuple(
 
 def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
            atol=1e-6, rtol=1e-4, maxiter=100,
-           verbose=False):
+           verbose=False, verbose_free=False):
 
     converged = False
     Ny = H.lattice.Y
@@ -325,6 +325,12 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             break
     E_S = H.free_energy_const_term()
     H.free = free - E_S
+
+    if verbose_free:
+        print(f"Free energy: {H.free}")
+        print(f"Entropy contribution: {S}")
+        print(f"Free energy constant term: {E_S}")
+        print(f"Total free energy: {H.free + E_S}")
 
     if not converged:
         print("==================================================")
