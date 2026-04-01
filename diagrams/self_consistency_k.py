@@ -17,6 +17,25 @@ Corr = namedtuple(
     ]
 )
 
+Result = namedtuple(
+    "Result",
+    [
+        "corr",
+        "F_onsite",
+        "F_swave",
+        "F_dwave",
+        "F_px",
+        "F_py",
+        "Fuu_px",
+        "Fuu_py",
+        "Fdd_px",
+        "Fdd_py",
+        "free_energy",
+        "converged",
+        "iterations"
+    ]
+)
+
 
 def build_bdg_hamiltonian(kx, ky, t, mu, h,
                           F0, F, Fuu, Fdd,
@@ -50,8 +69,8 @@ def build_bdg_hamiltonian(kx, ky, t, mu, h,
                F_yplus * emy + F_ymin * epy)
     Fk2 = -V * (F_xplus * epx + F_xmin * emx +
                 F_yplus * epy + F_ymin * emy)
-    Fk3 = -V * (F_xplus.conj() * emx + F_xmin.conj() * epx +
-                F_yplus.conj() * epy + F_ymin.conj() * emy)
+    Fk3 = -V * (np.conj(F_xplus) * emx + np.conj(F_xmin) * epx +
+                np.conj(F_yplus) * emy + np.conj(F_ymin) * epy)
     Fk4 = np.conj(Fk1)
 
     Fuu_k = -2j * V_prime * (Fuu_x * np.sin(kx) +
@@ -83,7 +102,7 @@ def build_bdg_hamiltonian(kx, ky, t, mu, h,
     H[3, 3] = -eps + hz
 
     if not is_hermitian(H):
-        raise ValueError("Hamiltonian is not hermitian")
+        raise ValueError("Hamiltonian is not Hermitian")
     return H
 
 
@@ -93,7 +112,7 @@ def bdg_sc_full_k(t, mu, Nx, Ny, temperature=0, h=np.zeros(3),
                   Fuu_init=np.zeros(4, dtype=np.complex128),
                   Fdd_init=np.zeros(4, dtype=np.complex128),
                   atol=1e-6, rtol=1e-4, maxiter=100,
-                  verbose=False):
+                  verbose=False, verbose_free=False):
 
     Nk = Nx * Ny
     kx_list = 2.0 * PI * np.arange(Nx) / Nx - PI
@@ -172,19 +191,16 @@ def bdg_sc_full_k(t, mu, Nx, Ny, temperature=0, h=np.zeros(3),
                 Fy_vw1 = F_vw * epy
                 Fy_vw2 = F_vw * emy
 
-                # equal-spin up-up
                 Fuu0 = (
                     np.sum(u_up * np.conj(v_up) * (1.0 - f_E))
                     + np.sum(u_up * np.conj(v_up) * f_E)
                 )
 
-                # equal-spin down-down
                 Fdd0 = (
                     np.sum(u_dn * np.conj(v_dn) * (1.0 - f_E))
                     + np.sum(u_dn * np.conj(v_dn) * f_E)
                 )
 
-                # accumulate anomalous correlators
                 F0_new += (F_ux + F_vw) / Nk
 
                 F_xplus_new += (Fx_ux1 + Fx_vw2) / Nk
@@ -232,7 +248,6 @@ def bdg_sc_full_k(t, mu, Nx, Ny, temperature=0, h=np.zeros(3),
         Fdd[2] = Fdd_yplus_new
         Fdd[3] = Fdd_ymin_new
 
-        # In full k-space these are scalars
         F_swave = 0.25 * (F_xplus_new + F_xmin_new + F_yplus_new + F_ymin_new)
         F_dwave = 0.25 * (F_xplus_new + F_xmin_new - F_yplus_new - F_ymin_new)
         F_px = 0.5 * (F_xplus_new - F_xmin_new)
@@ -281,38 +296,46 @@ def bdg_sc_full_k(t, mu, Nx, Ny, temperature=0, h=np.zeros(3),
     E_S = 0
     E_S += np.sum(U * np.abs(F0)**2)
 
-    E_S += np.sum(V * np.abs(F[0])**2) * Nk
-    E_S += np.sum(V * np.abs(F[1])**2) * Nk
-    E_S += np.sum(V * np.abs(F[2])**2) * Nk
-    E_S += np.sum(V * np.abs(F[3])**2) * Nk
+    E_S += np.sum(V * np.abs(F[0])**2)  # * Nk
+    E_S += np.sum(V * np.abs(F[1])**2)  # * Nk
+    E_S += np.sum(V * np.abs(F[2])**2)  # * Nk
+    E_S += np.sum(V * np.abs(F[3])**2)  # * Nk
 
-    E_S += np.sum(V_prime * np.abs(Fuu[0])**2) * Nk
-    E_S += np.sum(V_prime * np.abs(Fuu[1])**2) * Nk
-    E_S += np.sum(V_prime * np.abs(Fuu[2])**2) * Nk
-    E_S += np.sum(V_prime * np.abs(Fuu[3])**2) * Nk
+    E_S += np.sum(V_prime * np.abs(Fuu[0])**2)  # * Nk
+    E_S += np.sum(V_prime * np.abs(Fuu[1])**2)  # * Nk
+    E_S += np.sum(V_prime * np.abs(Fuu[2])**2)  # * Nk
+    E_S += np.sum(V_prime * np.abs(Fuu[3])**2)  # * Nk
 
-    E_S += np.sum(V_prime * np.abs(Fdd[0])**2) * Nk
-    E_S += np.sum(V_prime * np.abs(Fdd[1])**2) * Nk
-    E_S += np.sum(V_prime * np.abs(Fdd[2])**2) * Nk
-    E_S += np.sum(V_prime * np.abs(Fdd[3])**2) * Nk
+    E_S += np.sum(V_prime * np.abs(Fdd[0])**2)  # * Nk
+    E_S += np.sum(V_prime * np.abs(Fdd[1])**2)  # * Nk
+    E_S += np.sum(V_prime * np.abs(Fdd[2])**2)  # * Nk
+    E_S += np.sum(V_prime * np.abs(Fdd[3])**2)  # * Nk
+
+    if verbose_free:
+        print("==================================================")
+        print(f"Free energy = {free_energy}")
+        print(f"S = {S}")
+        print(f"E_S = {E_S}")
+        print(f"Total free energy = {free_energy + E_S}")
+        print("==================================================")
     free_energy += E_S
     if not converged:
         print("==================================================")
         print(f"WARNING: Failed to converge after {maxiter} iterations")
         print("==================================================")
 
-    return {
-        "corr": corr,
-        "F_onsite:": F0,
-        "F_swave": F_swave,
-        "F_dwave": F_dwave,
-        "F_px": F_px,
-        "F_py": F_py,
-        "Fuu_px": Fuu_px,
-        "Fuu_py": Fuu_py,
-        "Fdd_px": Fdd_px,
-        "Fdd_py": Fdd_py,
-        "free_energy": free_energy,  # -4635.626493896028
-        "converged": converged,
-        "iterations": iteration + 1,
-    }
+    return Result(
+        corr=corr,
+        F_onsite=F0,
+        F_swave=F_swave,
+        F_dwave=F_dwave,
+        F_px=F_px,
+        F_py=F_py,
+        Fuu_px=Fuu_px,
+        Fuu_py=Fuu_py,
+        Fdd_px=Fdd_px,
+        Fdd_py=Fdd_py,
+        free_energy=free_energy,  # -4635.626493896028
+        converged=converged,
+        iterations=iteration + 1,
+    )
