@@ -296,20 +296,20 @@ def bdg_sc_full_k(t, mu, Nx, Ny, temperature=0, h=np.zeros(3),
     E_S = 0
     E_S += np.sum(U * np.abs(F0)**2)
 
-    E_S += np.sum(V * np.abs(F[0])**2)  # * Nk
-    E_S += np.sum(V * np.abs(F[1])**2)  # * Nk
-    E_S += np.sum(V * np.abs(F[2])**2)  # * Nk
-    E_S += np.sum(V * np.abs(F[3])**2)  # * Nk
+    E_S += np.sum(V * np.abs(F[0])**2)
+    E_S += np.sum(V * np.abs(F[1])**2)
+    E_S += np.sum(V * np.abs(F[2])**2)
+    E_S += np.sum(V * np.abs(F[3])**2)
 
-    E_S += np.sum(V_prime * np.abs(Fuu[0])**2)  # * Nk
-    E_S += np.sum(V_prime * np.abs(Fuu[1])**2)  # * Nk
-    E_S += np.sum(V_prime * np.abs(Fuu[2])**2)  # * Nk
-    E_S += np.sum(V_prime * np.abs(Fuu[3])**2)  # * Nk
+    E_S += np.sum(V_prime * np.abs(Fuu[0])**2)
+    E_S += np.sum(V_prime * np.abs(Fuu[1])**2)
+    E_S += np.sum(V_prime * np.abs(Fuu[2])**2)
+    E_S += np.sum(V_prime * np.abs(Fuu[3])**2)
 
-    E_S += np.sum(V_prime * np.abs(Fdd[0])**2)  # * Nk
-    E_S += np.sum(V_prime * np.abs(Fdd[1])**2)  # * Nk
-    E_S += np.sum(V_prime * np.abs(Fdd[2])**2)  # * Nk
-    E_S += np.sum(V_prime * np.abs(Fdd[3])**2)  # * Nk
+    E_S += np.sum(V_prime * np.abs(Fdd[0])**2)
+    E_S += np.sum(V_prime * np.abs(Fdd[1])**2)
+    E_S += np.sum(V_prime * np.abs(Fdd[2])**2)
+    E_S += np.sum(V_prime * np.abs(Fdd[3])**2)
 
     if verbose_free:
         print("==================================================")
