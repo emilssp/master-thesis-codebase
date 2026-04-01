@@ -322,7 +322,7 @@ class Hamiltonian:
 
         E_S = self.free_energy_const_term()
 
-        free = free + E_S
+        free = free - E_S
         self.free = free
         return free
 
