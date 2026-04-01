@@ -269,16 +269,14 @@ class Hamiltonian:
 
     def free_energy_const_term(self):
 
-        Ny = self.lattice.Y
-
         E_S = 0
 
         E_S += np.sum(self.U * np.abs(self.F0)**2)
 
-        E_S += np.sum(self.V * np.abs(np.r_[0, self.F_xplus])**2) * Ny
-        E_S += np.sum(self.V * np.abs(np.r_[self.F_xmin, 0])**2) * Ny
-        E_S += np.sum(self.V * np.abs(self.F_yplus)**2) * Ny
-        E_S += np.sum(self.V * np.abs(self.F_ymin)**2) * Ny
+        E_S += np.sum(self.V * np.abs(np.r_[0, self.F_xplus])**2)
+        E_S += np.sum(self.V * np.abs(np.r_[self.F_xmin, 0])**2)
+        E_S += np.sum(self.V * np.abs(self.F_yplus)**2)
+        E_S += np.sum(self.V * np.abs(self.F_ymin)**2)
 
         E_S += np.sum(self.V_prime * np.abs(np.r_[0, self.Fuu_xplus])**2)
         E_S += np.sum(self.V_prime * np.abs(np.r_[self.Fuu_xmin, 0])**2)
