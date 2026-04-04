@@ -209,13 +209,13 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             ) / Ny
 
             Fuu_yplus_new += (
-                np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), (1-f_E))*ep +
-                np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), f_E)*em
+                np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), (1-f_E)) * ep
+                + np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), f_E) * em
             ) / Ny
 
             Fuu_ymin_new += (
-                np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), (1-f_E))*em +
-                np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), f_E)*ep
+                np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), (1-f_E)) * em
+                + np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), f_E) * ep
             ) / Ny
 
             # Triplet ↓↓
@@ -234,13 +234,13 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             ) / Ny
 
             Fdd_yplus_new += (
-                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), (1-f_E))*ep +
-                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), f_E)*em
+                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), (1-f_E)) * ep
+                + np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), f_E) * em
             ) / Ny
 
             Fdd_ymin_new += (
-                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), (1.0 - f_E))*em +
-                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), f_E)*ep
+                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), (1.0 - f_E)) * em
+                + np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), f_E) * ep
             ) / Ny
 
             # New parameters
