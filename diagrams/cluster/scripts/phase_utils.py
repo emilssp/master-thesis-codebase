@@ -27,21 +27,30 @@ def same_stable_dict(d1, d2, atol=1e-6, rtol=1e-3):
 
 
 def flatten_df(df):
-    df_flat = df.explode("configs").reset_index(drop=True)
+    df_flat = df.copy()
+
+    # Make sure configs is always a list before exploding
+    df_flat["configs"] = df_flat["configs"].apply(
+        lambda x: x if isinstance(x, list)
+        else [x] if isinstance(x, dict)
+        else []
+    )
+
+    df_flat = df_flat.explode("configs").reset_index(drop=True)
 
     # Split out the free energy and stable dict
     df_flat["free"] = df_flat["configs"].apply(
-        lambda x: x.get("free") if isinstance(x, dict) else 0
+        lambda x: x.get("free", 0) if isinstance(x, dict) else 0
     )
     df_flat["stable"] = df_flat["configs"].apply(
-        lambda x: x.get("stable") if isinstance(x, dict) else {}
+        lambda x: x.get("stable", {}) if isinstance(x, dict) else {}
     )
 
     # Expand the stable dictionaries into columns
     stable_df = pd.DataFrame(df_flat["stable"].tolist())
 
     # Ensure all desired columns exist
-    stable_df = stable_df.reindex(columns=corr_strings)
+    stable_df = stable_df.reindex(columns=corr_strings, fill_value=0)
 
     # Combine everything
     df_flat = pd.concat(
@@ -51,6 +60,6 @@ def flatten_df(df):
         ],
         axis=1
     )
-    df_flat.fillna(0, inplace=True)
 
+    df_flat.fillna(0, inplace=True)
     return df_flat
