@@ -20,3 +20,15 @@ spins = {
     "y-": -s2,
     "z-": -s3,
 }
+
+corr_strings = [
+    "F_onsite",
+    "F_swave",
+    "F_dwave",
+    "F_px",
+    "F_py",
+    "Fuu_px",
+    "Fuu_py",
+    "Fdd_px",
+    "Fdd_py",
+]
