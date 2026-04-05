@@ -22,7 +22,7 @@ seed_strings = [
 ]
 
 mu_arr = np.linspace(0.01, 4.0, 50)
-T_arr = np.linspace(0.001, 0.1, 50)
+T_arr = np.linspace(0.001, 0.15, 50)
 
 free_tol = 0.001
 
@@ -48,40 +48,47 @@ def main():
         print("====================================")
         print(f"mu={mu:.2f}, T={T:.4f}")
         print("====================================")
-        for seed, seed_str in zip(initial_seeds, seed_strings):
-            print(f"  Seed: {seed_str}")
+        for seed1, seed_str1 in zip(initial_seeds, seed_strings):
+            for seed2, seed_str2 in zip(initial_seeds, seed_strings):
+                print(f"  Seed-up: {seed_str1}")
+                print(f"  Seed-down: {seed_str2}")
 
-            out = bdg_sc_full_k(
-                t, mu, temperature=T,
-                V_prime=V_prime, Nx=Nx, Ny=Ny,
-                atol=atol, rtol=rtol,
-                maxiter=maxiter,
-                F_init=seed
-            )
-            stable = stable_config(out, atol=atol)
+                out = bdg_sc_full_k(
+                    t, mu, Nx, Ny, V_prime=V_prime,
+                    temperature=T, maxiter=maxiter,
+                    atol=atol, rtol=rtol,
+                    Fuu_init=seed1,
+                    Fdd_init=seed2
+                )
+                print(f"Fuu_px: {out.Fuu_px}, Fuu_py: {out.Fuu_py}")
+                print(f"Fdd_px: {out.Fdd_px}, Fdd_py: {out.Fdd_py}")
+                print(f"Free_energy = {out.free_energy}")
 
-            print("------------------------------------------")
-            if (out.free_energy < best_free and
-                    np.abs(out.free_energy - best_free) > free_tol):
+                stable = stable_config(out, atol=atol)
+                print("------------------------------------------")
 
-                best_free = out.free_energy
-                configs = [{
-                    "stable": stable,
-                    "free": out.free_energy,
-                }]
+                if (out.free_energy < best_free and
+                        np.abs(out.free_energy - best_free) > free_tol):
 
-            elif np.abs(out.free_energy - best_free) <= free_tol:
-                if len(stable) != 0 and not any(
-                    same_stable_dict(c["stable"], stable, atol=atol, rtol=rtol)
-                    for c in configs
-                ):
-                    configs.append({
+                    best_free = out.free_energy
+                    configs = [{
                         "stable": stable,
                         "free": out.free_energy,
-                    })
+                    }]
 
-            print(configs)
-            print("------------------------------------------")
+                elif np.abs(out.free_energy - best_free) <= free_tol:
+                    if len(stable) != 0 and not any(
+                        same_stable_dict(c["stable"], stable,
+                                         atol=atol, rtol=rtol)
+                        for c in configs
+                    ):
+                        configs.append({
+                            "stable": stable,
+                            "free": out.free_energy,
+                        })
+
+                print(configs)
+                print("------------------------------------------")
 
         records.append({
             "mu": mu,
