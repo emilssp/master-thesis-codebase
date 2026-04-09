@@ -383,6 +383,86 @@ class Hamiltonian:
         dos += np.sum(parts, axis=0)
         return dos
 
+    def dos_spin_resolved_k(self, energies, eta, H_kindep, k):
+
+        H_k = self.build_H_k(k)
+        H2 = H_kindep + H_k
+
+        eigval, eigvec = la.eigh(H2)
+
+        u_up = eigvec[0::4, :]  # electron ↑
+        u_dn = eigvec[1::4, :]  # electron ↓
+        v_up = eigvec[2::4, :]  # hole ↑
+        v_dn = eigvec[3::4, :]  # hole ↓
+
+        up_pos = np.sum(np.abs(u_up)**2, axis=0)  # (M,)
+        dn_pos = np.sum(np.abs(u_dn)**2, axis=0)
+        up_neg = np.sum(np.abs(v_up)**2, axis=0)
+        dn_neg = np.sum(np.abs(v_dn)**2, axis=0)
+
+        Lp = lorentzian(energies[:, None] - eigval[None, :], eta=eta)
+        Ln = lorentzian(energies[:, None] + eigval[None, :], eta=eta)
+
+        # Spin-resolved DOS
+        dos_up = (
+            np.einsum('nm,m->n', Lp, up_pos)
+            + np.einsum('nm,m->n', Ln, up_neg)
+        )
+        dos_dn = (
+            np.einsum('nm,m->n', Lp, dn_pos)
+            + np.einsum('nm,m->n', Ln, dn_neg)
+        )
+
+        return dos_up, dos_dn
+
+    def dos_spin_resolved(self, energies, eta):
+        Ny = self.lattice.Y
+        ky_list = np.linspace(PI / Ny, PI, Ny, endpoint=False)
+
+        H_kindep = self.build_H_kindep()
+        H_k0 = self.build_H_k0()
+
+        eigval0, eigvec0 = la.eigh(
+            H_kindep + H_k0,
+            subset_by_value=(0, np.inf)
+        )
+
+        # Basis: (e↑, e↓, h↑, h↓)
+        u_up0 = eigvec0[0::4, :]
+        u_dn0 = eigvec0[1::4, :]
+        v_up0 = eigvec0[2::4, :]
+        v_dn0 = eigvec0[3::4, :]
+
+        # Spin-resolved weights for k=0 sector
+        w_e_up0 = np.sum(np.abs(u_up0)**2, axis=0)
+        w_e_dn0 = np.sum(np.abs(u_dn0)**2, axis=0)
+        w_h_up0 = np.sum(np.abs(v_up0)**2, axis=0)
+        w_h_dn0 = np.sum(np.abs(v_dn0)**2, axis=0)
+
+        Lp0 = lorentzian(energies[:, None] - eigval0[None, :], eta=eta)
+        Ln0 = lorentzian(energies[:, None] + eigval0[None, :], eta=eta)
+
+        dos_up = (
+            np.einsum('nm,m->n', Lp0, w_e_up0)
+            + np.einsum('nm,m->n', Ln0, w_h_up0)
+        )
+        dos_dn = (
+            np.einsum('nm,m->n', Lp0, w_e_dn0)
+            + np.einsum('nm,m->n', Ln0, w_h_dn0)
+        )
+
+        def work(k):
+            return self.dos_spin_resolved_k(energies, eta, H_kindep, k)
+
+        with ThreadPoolExecutor(max_workers=os.cpu_count()) as ex:
+            parts = list(ex.map(work, ky_list))
+
+        # parts is a list of tuples: [(dos_up(k1), dos_dn(k1)), ...]
+        dos_up += np.sum([p[0] for p in parts], axis=0)
+        dos_dn += np.sum([p[1] for p in parts], axis=0)
+
+        return dos_up, dos_dn
+
     def spectrum_for_state(self):
         Nx = self.lattice.X
         Ny = self.lattice.Y
