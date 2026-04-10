@@ -191,15 +191,10 @@ def bdg_sc_full_k(t, mu, Nx, Ny, temperature=0, h=np.zeros(3),
                 Fy_vw1 = F_vw * epy
                 Fy_vw2 = F_vw * emy
 
-                Fuu0 = (
-                    np.sum(u_up * np.conj(v_up) * (1.0 - f_E))
-                    + np.sum(u_up * np.conj(v_up) * f_E)
-                )
-
-                Fdd0 = (
-                    np.sum(u_dn * np.conj(v_dn) * (1.0 - f_E))
-                    + np.sum(u_dn * np.conj(v_dn) * f_E)
-                )
+                Fuu_uw1 = np.sum(u_up * np.conj(v_up) * (1.0 - f_E))
+                Fuu_uw2 = np.sum(u_up * np.conj(v_up) * f_E)
+                Fdd_vx1 = np.sum(u_dn * np.conj(v_dn) * (1.0 - f_E))
+                Fdd_vx2 = np.sum(u_dn * np.conj(v_dn) * f_E)
 
                 F0_new += (F_ux + F_vw) / Nk
 
@@ -208,15 +203,15 @@ def bdg_sc_full_k(t, mu, Nx, Ny, temperature=0, h=np.zeros(3),
                 F_yplus_new += (Fy_ux1 + Fy_vw2) / Nk
                 F_ymin_new += (Fy_ux2 + Fy_vw1) / Nk
 
-                Fuu_xplus_new += Fuu0 * epx / Nk
-                Fuu_xmin_new += Fuu0 * emx / Nk
-                Fuu_yplus_new += Fuu0 * epy / Nk
-                Fuu_ymin_new += Fuu0 * emy / Nk
+                Fuu_xplus_new += (Fuu_uw1 * epx + Fuu_uw2 * emx) / Nk
+                Fuu_xmin_new += (Fuu_uw1 * emx + Fuu_uw2 * epx) / Nk
+                Fuu_yplus_new += (Fuu_uw1 * epy + Fuu_uw2 * emy) / Nk
+                Fuu_ymin_new += (Fuu_uw1 * emy + Fuu_uw2 * epy) / Nk
 
-                Fdd_xplus_new += Fdd0 * epx / Nk
-                Fdd_xmin_new += Fdd0 * emx / Nk
-                Fdd_yplus_new += Fdd0 * epy / Nk
-                Fdd_ymin_new += Fdd0 * emy / Nk
+                Fdd_xplus_new += (Fdd_vx1 * epx + Fdd_vx2 * emx) / Nk
+                Fdd_xmin_new += (Fdd_vx1 * emx + Fdd_vx2 * epx) / Nk
+                Fdd_yplus_new += (Fdd_vx1 * epy + Fdd_vx2 * emy) / Nk
+                Fdd_ymin_new += (Fdd_vx1 * emy + Fdd_vx2 * epy) / Nk
 
         corr = Corr(
             F0, F[0], F[1], F[2], F[3],

@@ -26,7 +26,7 @@ seed_strings = [
 ]
 
 mu_arr = np.linspace(0.61, 1.3, 30)
-T_arr = np.linspace(0.001, 0.1, 34)
+T_arr = np.linspace(0.001, 0.3, 34)
 
 free_tol = 0.1
 
