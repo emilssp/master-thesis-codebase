@@ -47,8 +47,8 @@ seed_strings = [
     "uu+dd:px", "uu+dd:px+py", "uu+dd:px+ipy",
 ]
 
-mu_arr = np.linspace(0.001, 4.5, 25)
-T_arr = np.linspace(0.001, 0.2, 25)
+mu_arr = np.linspace(-4.0, 4.0, 50)
+T_arr = np.linspace(0.001, 0.1, 25)
 
 free_tol = 0.1
 
@@ -57,10 +57,10 @@ V = 1.5
 Nx, Ny = 75, 75
 
 atol = 1e-6
-rtol = 1e-3
-maxiter = 5000
+rtol = 1e-4
+maxiter = 2000
 
-h = np.zeros(3)
+rows = []
 
 
 def main():
@@ -84,12 +84,22 @@ def main():
             print(f"  Seed uu: {seed_uu}, Seed dd: {seed_dd}")
             out = bdg_sc_full_k(
                 t, mu, temperature=T,
-                V_prime=V, Nx=Nx, Ny=Ny, h=h,
+                V_prime=V, Nx=Nx, Ny=Ny,
                 atol=atol, rtol=rtol,
                 maxiter=maxiter,
                 Fuu_init=seed_uu,
                 Fdd_init=seed_dd
             )
+
+            rows.append({
+                "mu": mu,
+                "temp": T,
+                "seed": seed_str,
+                "Fuu_px": out.Fuu_px,
+                "Fuu_py": out.Fuu_py,
+                "Fdd_px": out.Fdd_px,
+                "Fdd_py": out.Fdd_py,
+            })
 
             print(f"F_onsite: {out.F_onsite}")
             print(f"F_swave: {out.F_swave}, F_dwave: {out.F_dwave}")
@@ -128,13 +138,17 @@ def main():
             "configs": configs
         })
 
-    # Create DataFrame
+    # Create DataFrames and save results
+    df_raw = pd.DataFrame(rows)
     df = pd.DataFrame(records)
     df_flat = flatten_df(df)
 
     file_idx = idx
     os.makedirs("data/muT_V15_prime", exist_ok=True)
+    os.makedirs("data/muT_V15_prime/raw", exist_ok=True)
+
     df_flat.to_json(f"data/muT_V15_prime/results_{file_idx:04d}.json")
+    df_raw.to_json(f"data/muT_V15_prime/raw/results_{file_idx:04d}.json")
 
 
 if __name__ == "__main__":
