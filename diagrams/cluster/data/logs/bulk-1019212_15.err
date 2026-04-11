@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/global/D1/homes/emilssp/thesis/phases/./scripts/run_phase_bulk.py", line 118, in <module>
+    main()
+  File "/global/D1/homes/emilssp/thesis/phases/./scripts/run_phase_bulk.py", line 64, in main
+    out = bdg_sc_full_k(
+  File "/global/D1/homes/emilssp/thesis/phases/scripts/self_consistency_k.py", line 154, in bdg_sc_full_k
+    eigval, eigvec = la.eigh(
+  File "/home/emilssp/D1/venv/lib/python3.10/site-packages/scipy/linalg/_decomp.py", line 618, in eigh
+    raise LinAlgError(msg)
+numpy.linalg.LinAlgError: Internal Error.

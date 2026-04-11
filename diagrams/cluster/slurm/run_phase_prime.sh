@@ -2,7 +2,7 @@
 #SBATCH --job-name=prime
 #SBATCH --output=logs/prime-%A_%a.out
 #SBATCH --error=logs/prime-%A_%a.err
-#SBATCH --array=0-49
+#SBATCH --array=0-47
 #SBATCH --cpus-per-task=6
 #SBATCH --time=48:00:00
 #SBATCH --partition=fpgaq
