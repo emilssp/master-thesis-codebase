@@ -2,19 +2,19 @@ import os
 import sys
 import numpy as np
 
-from utils.Hamiltonian import Hamiltonian
-from utils.Lattice import Lattice
-from utils.self_consistency import bdg_sc
+from utilsdir.Hamiltonian import Hamiltonian
+from utilsdir.Lattice import Lattice
+from utilsdir.self_consistency import bdg_sc
 
 
 def main():
     idx = int(sys.argv[1])
 
-    widthS = 30
+    widthS = 5
     widthF = 1
-    widthP = 30
+    widthP = 10
 
-    X, Y = widthS+widthF+widthP, 60
+    X, Y = widthS+widthF+widthP, 200
     lattice = Lattice(X, Y)
     t = 1
 
@@ -31,12 +31,12 @@ def main():
     hz = np.zeros_like(mu)
     hz[widthS:widthS + widthF] = hz0
 
-    U0 = 5.2 * t / 2
+    U0 = 5.2 * t
     U = U0 * np.ones(lattice.X)
     U[widthS:] = 0
     U[widthS-1] = U0/2
 
-    V0 = 1.5 * t / 2
+    V0 = 1.5 * t
     V = V0 * np.ones(lattice.X)
     V[:widthF+widthS] = 0
     V[widthF+widthS-1] = V0/2
@@ -47,7 +47,7 @@ def main():
         np.arange(0.001, 0.020 + 1e-12, 0.001),
         np.arange(0.021, 0.040 + 1e-12, 0.0002),
         np.arange(0.041, 0.061 + 1e-12, 0.0002),
-    ])
+    ])  # 217 temps total
     temp = temps[idx]
 
     print(f"Running job {idx} out of {len(temps)}")
@@ -62,7 +62,7 @@ def main():
     # Adjust to your actual bdg_sc output
     F_swave, F_dwave, F_px, F_py = bdg_sc(
         H, maxiter=10000, temperature=temp,
-        rtol=1e-3, atol=1e-6
+        rtol=1e-4, atol=1e-8
     )
     F0 = H.F0
     os.makedirs("data/SFP", exist_ok=True)

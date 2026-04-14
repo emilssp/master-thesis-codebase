@@ -5,7 +5,7 @@
 #SBATCH --array=0-216
 #SBATCH --cpus-per-task=4
 #SBATCH --time=24:00:00
-#SBATCH --partition=habanaq
+#SBATCH --partition=fpgaq
 
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 export MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK}

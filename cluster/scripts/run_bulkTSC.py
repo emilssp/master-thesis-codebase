@@ -2,45 +2,45 @@ import os
 import sys
 import numpy as np
 
-from utils.Hamiltonian import Hamiltonian
-from utils.Lattice import Lattice
-from utils.self_consistency import bdg_sc
+from utilsdir.Hamiltonian import Hamiltonian
+from utilsdir.Lattice import Lattice
+from utilsdir.self_consistency import bdg_sc
 
 
 def main():
     idx = int(sys.argv[1])
 
-    X, Y = 60, 60
+    X, Y = 10, 200
     t = 1.0
     lattice = Lattice(X, Y)
 
-    mu = 1.8 * t * np.ones(lattice.X)
+    mu = 0.1 * t * np.ones(lattice.X)
 
     temps = np.concatenate([
-        np.arange(0.001, 0.020 + 1e-12, 0.001),
-        np.arange(0.021, 0.040 + 1e-12, 0.0002),
-        np.arange(0.041, 0.061 + 1e-12, 0.0002),
-    ])
-
+        np.arange(0.001, 0.009 + 1e-12, 0.001),
+        np.arange(0.01, 0.30 + 1e-12, 0.01),
+        np.arange(0.31, 0.41 + 1e-12, 0.001),
+        np.arange(0.42, 0.60 + 1e-12, 0.002)
+    ])  # 231 temps total
     temp = temps[idx]
 
     print(f"Running job {idx} out of {len(temps)}")
 
     U = np.zeros(lattice.X)
-    V_prime = np.zeros(lattice.X)
-    V0 = 1.5 * t / 2  # add factor to check Kuboki
-    V = V0 * np.ones(lattice.X)
+    V = np.zeros(lattice.X)
+    V0 = 1.5 * t
+    V_prime = V0 * np.ones(lattice.X)
 
     H = Hamiltonian(
         t, mu, lattice,
         U=U, V_prime=V_prime, V=V,
-        F0_init=0.0,
-        F_init=[0.1, -0.1, 0.1j, -0.1j],
+        Fuu_init=[0.1, -0.1, 0.1j, -0.1j],
+        Fdd_init=[0.1, -0.1, 0.1j, -0.1j],
     )
 
     # Adjust to your actual bdg_sc output
     F_swave, F_dwave, F_px, F_py = bdg_sc(
-        H, maxiter=10000, temperature=temp,
+        H, maxiter=2000, temperature=temp,
         rtol=1e-3, atol=1e-6
     )
     F, Fuu, Fdd = H.get_correlations()

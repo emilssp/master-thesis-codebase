@@ -47,11 +47,11 @@ T_arr = np.linspace(0.001, 0.1, 25)
 free_tol = 0.005
 
 t = 1
-V = 3.0
+V = 1.5
 Nx, Ny = 100, 100
 
-atol = 1e-8
-rtol = 1e-5
+atol = 1e-6
+rtol = 1e-4
 maxiter = 3000
 
 rows = []

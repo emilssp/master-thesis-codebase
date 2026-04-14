@@ -2,7 +2,7 @@
 #SBATCH --job-name=bulkP
 #SBATCH --output=logs/bulkD-%A_%a.out
 #SBATCH --error=logs/bulkD-%A_%a.err
-#SBATCH --array=0-170
+#SBATCH --array=0-326
 #SBATCH --cpus-per-task=4
 #SBATCH --time=24:00:00
 #SBATCH --partition=habanaq
