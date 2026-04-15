@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=bulkP
+#SBATCH --job-name=bulkD
 #SBATCH --output=logs/bulkD-%A_%a.out
 #SBATCH --error=logs/bulkD-%A_%a.err
 #SBATCH --array=0-326

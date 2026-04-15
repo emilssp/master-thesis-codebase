@@ -40,7 +40,7 @@ def main():
     # Adjust to your actual bdg_sc output
     F_swave, F_dwave, F_px, F_py = bdg_sc(
         H, maxiter=10000, temperature=temp,
-        rtol=1e-4, atol=1e-8
+        rtol=1e-3, atol=1e-6
     )
     F0 = H.F0
     os.makedirs("data/bulkD", exist_ok=True)

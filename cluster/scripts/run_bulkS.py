@@ -27,7 +27,7 @@ def main():
 
     print(f"Running job {idx} out of {len(temps)}")
 
-    U0 = 5.2 * t / 2
+    U0 = 5.2 * t
     U = U0 * np.ones(lattice.X)
 
     V_prime = None

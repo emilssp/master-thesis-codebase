@@ -35,9 +35,9 @@ def main():
     V_prime = None
 
     temps = np.concatenate([
-        np.arange(0.001, 0.020 + 1e-12, 0.001),
-        np.arange(0.021, 0.040 + 1e-12, 0.0002),
-        np.arange(0.041, 0.061 + 1e-12, 0.0002),
+        np.array([0.001]),  # add a very low temp for testing
+        np.arange(0.01, 0.20 + 1e-12, 0.01),
+        np.arange(0.21, 0.60 + 1e-12, 0.002),
     ])  # 217 temps total
 
     temp = temps[idx]
@@ -54,7 +54,7 @@ def main():
     # Adjust to your actual bdg_sc output
     F_swave, F_dwave, F_px, F_py = bdg_sc(
         H, maxiter=10000, temperature=temp,
-        rtol=1e-4, atol=1e-8
+        rtol=1e-3, atol=1e-6
     )
     F0 = H.F0
     os.makedirs("data/SP", exist_ok=True)

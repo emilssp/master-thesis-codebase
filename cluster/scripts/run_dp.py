@@ -55,7 +55,7 @@ def main():
 
     # Adjust to your actual bdg_sc output
     F_swave, F_dwave, F_px, F_py = bdg_sc(
-        H, maxiter=2000, temperature=temp,
+        H, maxiter=10000, temperature=temp,
         rtol=1e-3, atol=1e-6
     )
     F, Fuu, Fdd = H.get_correlations()
@@ -65,7 +65,7 @@ def main():
         f"data/DP/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
-        F0=F0[int(X/2-1)],
+        F0=F0[int(widthS/2-1)],
         F_swave=F_swave[int(widthS/2-1)],
         F_dwave=F_dwave[int(widthS/2-1)],
         F_px=F_px[int(widthS/2-1)],
