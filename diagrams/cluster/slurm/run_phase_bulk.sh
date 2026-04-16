@@ -2,7 +2,7 @@
 #SBATCH --job-name=bulk
 #SBATCH --output=logs/bulk-%A_%a.out
 #SBATCH --error=logs/bulk-%A_%a.err
-#SBATCH --array=0-44
+#SBATCH --array=0-67
 #SBATCH --cpus-per-task=6
 #SBATCH --time=62:00:00
 #SBATCH --partition=fpgaq

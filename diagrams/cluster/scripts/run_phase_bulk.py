@@ -28,10 +28,15 @@ seed_strings = [
     "s-wave", "s-wave+px", "s-wave+py"
 ]
 
-mu_arr = np.linspace(0.001, 4.5, 45)
-T_arr = np.linspace(0.001, 0.3, 30)
 
-free_tol = 0.1
+mu_arr = np.concatenate([
+            np.linspace(0.001, 0.5, 7),
+            np.linspace(0.55, 1.5, 25),
+            np.linspace(1.55, 4.5, 35)
+        ])  # length 67
+T_arr = np.linspace(0.001, 0.3, 40)
+
+free_tol = 0.01
 
 t = 1
 V = 1.5

@@ -27,7 +27,7 @@ def is_hermitian(matrix, atol=1e-8, rtol=1e-6):
     return is_hermitian
 
 
-def is_converged(corr, corr_new, atol, rtol, eps=1e-12):
+def is_converged(corr, corr_new, atol, rtol, eps=1e-10):
     c1 = True
     c2 = True
     for new, old in zip(corr, corr_new):

@@ -27,7 +27,7 @@ def main():
     V_prime = None
 
     V0 = 1.5 * t
-    V = V0 * np.ones(lattice.X)/2
+    V = V0 * np.ones(lattice.X)
     V[:widthN] = 0
     V[widthN-1] = V0/2
 
