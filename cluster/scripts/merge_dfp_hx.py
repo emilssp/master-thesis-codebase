@@ -9,6 +9,7 @@ for f in files:
     rows.append((
         int(d["idx"]),
         float(d["temp"]),
+        bool(d["converged"]),
         d["F0"].item(),
         d["F_swave"].item(),
         d["F_dwave"].item(),

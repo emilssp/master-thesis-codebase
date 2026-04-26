@@ -27,15 +27,14 @@ def main():
 
     print(f"Running job {idx} out of {len(temps)}")
 
-    U = np.zeros(lattice.X)
-    V_prime = np.zeros(lattice.X)
-    V0 = 1.5 * t  # add factor to check Kuboki
+    U = None
+    V_prime = None
+    V0 = 1.5 * t
     V = V0 * np.ones(lattice.X)
 
     H = Hamiltonian(
         t, mu, lattice,
         U=U, V_prime=V_prime, V=V,
-        F0_init=0.0,
         F_init=[0.1, -0.1, 0.1j, -0.1j],
     )
 
@@ -50,11 +49,11 @@ def main():
         f"data/bulkP/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
-        F0=F0[int(X/2-1)],
-        F_swave=F_swave[int(X/2-1)],
-        F_dwave=F_dwave[int(X/2-1)],
-        F_px=F_px[int(X/2-1)],
-        F_py=F_py[int(X/2-1)],
+        F0=F0[int(X/2)],
+        F_swave=F_swave[int(X/2)],
+        F_dwave=F_dwave[int(X/2)],
+        F_px=F_px[int(X/2)],
+        F_py=F_py[int(X/2)],
     )
 
 

@@ -14,7 +14,7 @@ def main():
     t = 1.0
     lattice = Lattice(X, Y)
 
-    mu = 0.1 * t * np.ones(lattice.X)
+    mu = 1.8 * t * np.ones(lattice.X)
 
     temps = np.concatenate([
         np.arange(0.001, 0.009 + 1e-12, 0.001),
@@ -39,10 +39,7 @@ def main():
     )
 
     # Adjust to your actual bdg_sc output
-    F_swave, F_dwave, F_px, F_py = bdg_sc(
-        H, maxiter=2000, temperature=temp,
-        rtol=1e-3, atol=1e-6
-    )
+    bdg_sc(H, maxiter=2000, temperature=temp, rtol=1e-3, atol=1e-6)
     F, Fuu, Fdd = H.get_correlations()
     F0 = H.F0
 
@@ -51,11 +48,12 @@ def main():
         f"data/bulkTSC/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
+        converged=H.converged,
         F0=F0[int(X/2-1)],
-        F_swave=F_swave[int(X/2-1)],
-        F_dwave=F_dwave[int(X/2-1)],
-        F_px=F_px[int(X/2-1)],
-        F_py=F_py[int(X/2-1)],
+        F_swave=F.swave[int(X/2-1)],
+        F_dwave=F.dwave[int(X/2-1)],
+        F_px=F.px[int(X/2-1)],
+        F_py=F.py[int(X/2-1)],
         Fuu_px=Fuu.px[int(X/2-1)],
         Fuu_py=Fuu.py[int(X/2-1)],
         Fdd_px=Fdd.px[int(X/2-1)],

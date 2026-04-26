@@ -21,7 +21,7 @@ Corr = namedtuple(
 
 def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
            atol=1e-6, rtol=1e-4, maxiter=100,
-           verbose=False, verbose_free=False):
+           verbose=False):
 
     converged = False
     Ny = H.lattice.Y
@@ -209,13 +209,13 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             ) / Ny
 
             Fuu_yplus_new += (
-                np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), (1-f_E)) * ep
-                + np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), f_E) * em
+                np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), (1-f_E))*ep +
+                np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), f_E)*em
             ) / Ny
 
             Fuu_ymin_new += (
-                np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), (1-f_E)) * em
-                + np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), f_E) * ep
+                np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), (1-f_E))*em +
+                np.einsum('nm,nm,nm->n', u_up, np.conj(v_up), f_E)*ep
             ) / Ny
 
             # Triplet ↓↓
@@ -234,13 +234,13 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             ) / Ny
 
             Fdd_yplus_new += (
-                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), (1-f_E)) * ep
-                + np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), f_E) * em
+                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), (1-f_E))*ep +
+                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), f_E)*em
             ) / Ny
 
             Fdd_ymin_new += (
-                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), (1.0 - f_E)) * em
-                + np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), f_E) * ep
+                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), (1.0 - f_E))*em +
+                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), f_E)*ep
             ) / Ny
 
             # New parameters
@@ -325,16 +325,11 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             break
     E_S = H.free_energy_const_term()
     H.free = free - E_S
-
-    if verbose_free:
-        print(f"Free energy: {H.free}")
-        print(f"Entropy contribution: {S}")
-        print(f"Free energy constant term: {E_S}")
-        print(f"Total free energy: {H.free + E_S}")
-
     if not converged:
         print("==================================================")
         print(f"WARNING: Failed to converge after {iteration+1} iterations")
         print("==================================================")
+
+    H.converged = converged
 
     return F_swave, F_dwave, F_px, F_py

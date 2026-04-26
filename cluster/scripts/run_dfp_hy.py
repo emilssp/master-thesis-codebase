@@ -18,27 +18,30 @@ def main():
     lattice = Lattice(X, Y)
 
     t = 1
+
     muD = 0.1 * t
-    muP = 0.1 * t
+    muP = 1.8 * t
     muF = 1.4 * t
     mu = np.zeros(lattice.X)
     mu[:widthD] = muD
     mu[widthD:widthD + widthF] = muF
     mu[widthD + widthF:] = muP
 
-    hy0 = 0.9 * t
-    hy = np.zeros_like(mu)
-    hy[widthD:widthD + widthF] = hy0
+    h0 = 0.9 * t
+    h = np.zeros_like(mu)
+    h[widthD:widthD + widthF] = h0
 
-    V_prime0 = 1.5 * t
-    V_prime = V_prime0 * np.ones(lattice.X)
-    V_prime[:widthF+widthD] = 0
+    U = None
 
     V0 = 1.5 * t
     V = V0 * np.ones(lattice.X)
     V[widthD:] = 0
+    V[widthD-1] = V0/2
 
-    U = None
+    V_prime0 = 1.5 * t
+    V_prime = V_prime0 * np.ones(lattice.X)
+    V_prime[:widthF+widthD] = 0
+    V_prime[widthF+widthD] = V_prime0/2
 
     temps = np.concatenate([
         np.arange(0.001, 0.009 + 1e-12, 0.001),
@@ -50,20 +53,13 @@ def main():
 
     print(f"Running job {idx} out of {len(temps)}")
 
-    H = Hamiltonian(
-        t, mu, lattice,
-        U=U, V_prime=V_prime, V=V,
-        hy=hy,
-        F_init=[0.1, 0.1, -0.1, -0.1],
-        Fuu_init=[0.1, -0.1, 0.1j, -0.1j],
-        Fdd_init=[0.1, -0.1, 0.1j, -0.1j],
-    )
+    H = Hamiltonian(t, mu, lattice, U=U, V_prime=V_prime, V=V,
+                    F_init=[0.1, 0.1, -0.1, -0.1],
+                    Fuu_init=[0.1, -0.1, 0.1j, -0.1j],
+                    Fdd_init=[0.1, -0.1, 0.1j, -0.1j],
+                    hy=h)
 
-    # Adjust to your actual bdg_sc output
-    F_swave, F_dwave, F_px, F_py = bdg_sc(
-        H, maxiter=10000, temperature=temp,
-        rtol=1e-3, atol=1e-6
-    )
+    bdg_sc(H, atol=1e-6, rtol=1e-4, maxiter=10000, temperature=temp)
 
     F0 = H.F0
     F, Fuu, Fdd = H.get_correlations()
@@ -73,15 +69,15 @@ def main():
         f"data/DFP_hy/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
-        F0=F0[int(widthD/2)-1],
-        F_swave=F.swave[int(widthD/2)-1],
-        F_dwave=F.dwave[int(widthD/2)-1],
-        F_px=F.px[int(widthD/2)-1],
-        F_py=F.py[int(widthD/2)-1],
-        Fuu_px=Fuu.px[int(widthD+widthF+widthP/2)-1],
-        Fuu_py=Fuu.py[int(widthD+widthF+widthP/2)-1],
-        Fdd_px=Fdd.px[int(widthD+widthF+widthP/2)-1],
-        Fdd_py=Fdd.py[int(widthD+widthF+widthP/2)-1],
+        F0=F0[int(widthD/2)+1],
+        F_swave=F.swave[int(widthD/2)+1],
+        F_dwave=F.dwave[int(widthD/2)+1],
+        F_px=F.px[int(widthD/2)+1],
+        F_py=F.py[int(widthD/2)+1],
+        Fuu_px=Fuu.px[int(widthD+widthF+widthP/2)],
+        Fuu_py=Fuu.py[int(widthD+widthF+widthP/2)],
+        Fdd_px=Fdd.px[int(widthD+widthF+widthP/2)],
+        Fdd_py=Fdd.py[int(widthD+widthF+widthP/2)],
     )
 
     # save parameters for inspection
@@ -95,7 +91,7 @@ def main():
             "muS": muD,
             "muF": muF,
             "muP": muP,
-            "hy0": hy0,
+            "hy0": h0,
             "U0": 0,
             "V0": V0,
             "V_prime": V0,

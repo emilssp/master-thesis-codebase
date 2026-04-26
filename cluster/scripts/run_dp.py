@@ -17,29 +17,28 @@ def main():
 
     t = 1
     muS = 0.1 * t
-    muP = 0.1 * t
+    muP = 1.8 * t
     mu = np.zeros(lattice.X)
     mu[:widthS:] = muS
     mu[widthS:] = muP
 
-    V0 = 1.5 * t
-
+    V0 = 5.0 * t
     V = V0 * np.ones(lattice.X)
     V[widthS:] = 0
     V[widthS-1] = V0/2
 
-    V_prime = V0 * np.ones(lattice.X)
+    V_prime0 = 1.5 * t
+    V_prime = V_prime0 * np.ones(lattice.X)
     V_prime[:widthS] = 0
-    V_prime[widthS-1] = V0/2
+    V_prime[widthS-1] = V_prime0/2
 
     U = None
 
     temps = np.concatenate([
-        np.arange(0.001, 0.009 + 1e-12, 0.001),
-        np.arange(0.01, 0.30 + 1e-12, 0.01),
-        np.arange(0.31, 0.41 + 1e-12, 0.001),
-        np.arange(0.42, 0.60 + 1e-12, 0.002)
-    ])  # 231 temps total
+        np.array([0.001]),  # add a very low temp for testing
+        np.arange(0.01, 0.20 + 1e-12, 0.01),
+        np.arange(0.21, 0.60 + 1e-12, 0.002),
+    ])  # 217 temps total
 
     temp = temps[idx]
 
@@ -48,32 +47,32 @@ def main():
     H = Hamiltonian(
         t, mu, lattice,
         U=U, V_prime=V_prime, V=V,
-        F_init=[0.1, 0.1, -0.1, -0.1],
+        F_init=[0.5, 0.5, -0.5, -0.5],
         Fuu_init=[0.1, -0.1, 0.1j, -0.1j],
         Fdd_init=[0.1, -0.1, 0.1j, -0.1j],
     )
 
     # Adjust to your actual bdg_sc output
-    F_swave, F_dwave, F_px, F_py = bdg_sc(
-        H, maxiter=10000, temperature=temp,
-        rtol=1e-3, atol=1e-6
-    )
-    F, Fuu, Fdd = H.get_correlations()
+    bdg_sc(H, maxiter=10000, temperature=temp, rtol=1e-3, atol=1e-6)
+
     F0 = H.F0
+    F, Fuu, Fdd = H.get_correlations()
+
     os.makedirs("data/DP", exist_ok=True)
     np.savez(
         f"data/DP/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
-        F0=F0[int(widthS/2-1)],
-        F_swave=F_swave[int(widthS/2-1)],
-        F_dwave=F_dwave[int(widthS/2-1)],
-        F_px=F_px[int(widthS/2-1)],
-        F_py=F_py[int(widthS/2-1)],
-        Fuu_px=Fuu.px[int(widthS+widthP/2)-1],
-        Fuu_py=Fuu.py[int(widthS+widthP/2)-1],
-        Fdd_px=Fdd.px[int(widthS+widthP/2)-1],
-        Fdd_py=Fdd.py[int(widthS+widthP/2)-1],
+        converged=H.converged,
+        F0=F0[int(widthS/2)+1],
+        F_swave=F.swave[int(widthS/2)+1],
+        F_dwave=F.dwave[int(widthS/2)+1],
+        F_px=F.px[int(widthS/2)+1],
+        F_py=F.py[int(widthS/2)+1],
+        Fuu_px=Fuu.px[int(widthS+widthP/2)+1],
+        Fuu_py=Fuu.py[int(widthS+widthP/2)+1],
+        Fdd_px=Fdd.px[int(widthS+widthP/2)+1],
+        Fdd_py=Fdd.py[int(widthS+widthP/2)+1],
     )
 
     # save parameters for inspection
@@ -87,10 +86,10 @@ def main():
             "muP": muP,
             "U0": 0,
             "V0": V0,
-            "V_prime": V0,
+            "V_prime": V_prime0,
         }
 
-        param_file = f"data/SP/params_{idx:04d}.txt"
+        param_file = f"data/DP/params_{idx:04d}.txt"
         with open(param_file, "w") as f:
             for key, value in params.items():
                 f.write(f"{key} = {value}\n")

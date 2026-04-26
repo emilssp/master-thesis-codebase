@@ -325,10 +325,11 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             break
     E_S = H.free_energy_const_term()
     H.free = free - E_S
-
     if not converged:
         print("==================================================")
         print(f"WARNING: Failed to converge after {iteration+1} iterations")
         print("==================================================")
+
+    H.converged = converged
 
     return F_swave, F_dwave, F_px, F_py
