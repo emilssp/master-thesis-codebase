@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=SFP_hx
-#SBATCH --output=logs/SFP_hx-%A_%a.out
-#SBATCH --error=logs/SFP_hx-%A_%a.err
+#SBATCH --job-name=DFP_Bfield
+#SBATCH --output=logs/DFP_Bfield-%A_%a.out
+#SBATCH --error=logs/DFP_Bfield-%A_%a.err
 #SBATCH --array=0-216
 #SBATCH --cpus-per-task=4
 #SBATCH --time=24:00:00
@@ -13,9 +13,9 @@ export OPENBLAS_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 
 source ~/D1/venv/bin/activate
 
-mkdir -p logs data data/SFP_hx
+mkdir -p logs data data/DFP_hx_Bfield
 
 which python
 python --version
 
-python ./scripts/run_sfp_hx.py ${SLURM_ARRAY_TASK_ID}
+python ./scripts/run_dfp_hx_Bfield.py ${SLURM_ARRAY_TASK_ID}
