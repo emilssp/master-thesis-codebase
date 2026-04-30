@@ -120,11 +120,10 @@ class Hamiltonian:
 
     def build_H_kindep(self):
         gap0 = self.U * self.F0
-        FS_x = 0.5 * (self.F_xplus + self.F_xmin)
-        FT_x = 0.5 * (self.F_xplus - self.F_xmin)
-
-        gapS_x = self.g_s[:-1] * FS_x
-        gapT_x = self.g_t[:-1] * FT_x
+        gapS_x = 0.5 * (self.g_s[:-1] * self.F_xplus
+                        + self.g_s[1:] * self.F_xmin)
+        gapT_x = 0.5 * (self.g_t[:-1] * self.F_xplus
+                        - self.g_t[1:] * self.F_xmin)
 
         gap1_uu = self.V_prime[1:] * self.Fuu_xmin
         gap2_uu = self.V_prime[:-1] * self.Fuu_xplus
