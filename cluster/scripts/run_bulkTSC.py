@@ -33,12 +33,12 @@ def main():
     H = Hamiltonian(
         t, mu, lattice,
         U=U, V_prime=V_prime,
-        Fuu_init=[0.1, -0.1, 0.1j, -0.1j],
-        Fdd_init=[0.1, -0.1, 0.1j, -0.1j],
+        Fuu_init=[0.01, -0.01, 0.1j, -0.1j],
+        Fdd_init=[0.01, -0.01, 0.1j, -0.1j],
     )
 
     # Adjust to your actual bdg_sc output
-    bdg_sc(H, maxiter=2000, temperature=temp, rtol=1e-3, atol=1e-6)
+    bdg_sc(H, maxiter=20000, temperature=temp, rtol=1e-3, atol=1e-6)
     F, Fuu, Fdd = H.get_correlations()
     F0 = H.F0
 
@@ -48,15 +48,15 @@ def main():
         idx=idx,
         temp=temp,
         converged=H.converged,
-        F0=F0[int(X/2-1)],
-        F_swave=F.swave[int(X/2-1)],
-        F_dwave=F.dwave[int(X/2-1)],
-        F_px=F.px[int(X/2-1)],
-        F_py=F.py[int(X/2-1)],
-        Fuu_px=Fuu.px[int(X/2-1)],
-        Fuu_py=Fuu.py[int(X/2-1)],
-        Fdd_px=Fdd.px[int(X/2-1)],
-        Fdd_py=Fdd.py[int(X/2-1)],
+        F0=F0[int(X/2)-1],
+        F_swave=F.swave[int(X/2)-1],
+        F_dwave=F.dwave[int(X/2)-1],
+        F_px=F.px[int(X/2)-1],
+        F_py=F.py[int(X/2)-1],
+        Fuu_px=Fuu.px[int(X/2)-1],
+        Fuu_py=Fuu.py[int(X/2)-1],
+        Fdd_px=Fdd.px[int(X/2)-1],
+        Fdd_py=Fdd.py[int(X/2)-1],
     )
 
 

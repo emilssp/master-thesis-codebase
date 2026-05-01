@@ -35,12 +35,12 @@ def main():
     H = Hamiltonian(
         t, mu, lattice,
         U=U, V_prime=V_prime, g_t=V,
-        F_init=[0.1, -0.1, 0.1j, -0.1j],
+        F_init=[0.01, -0.01, 0.1j, -0.1j],
     )
 
     # Adjust to your actual bdg_sc output
     F_swave, F_dwave, F_px, F_py = bdg_sc(
-        H, maxiter=10000, temperature=temp,
+        H, maxiter=20000, temperature=temp,
         rtol=1e-3, atol=1e-6
     )
     F0 = H.F0
@@ -50,11 +50,11 @@ def main():
         idx=idx,
         temp=temp,
         converged=H.converged,
-        F0=F0[int(X/2)],
-        F_swave=F_swave[int(X/2)],
-        F_dwave=F_dwave[int(X/2)],
-        F_px=F_px[int(X/2)],
-        F_py=F_py[int(X/2)],
+        F0=F0[int(X/2)-1],
+        F_swave=F_swave[int(X/2)-1],
+        F_dwave=F_dwave[int(X/2)-1],
+        F_px=F_px[int(X/2)-1],
+        F_py=F_py[int(X/2)-1],
     )
 
 

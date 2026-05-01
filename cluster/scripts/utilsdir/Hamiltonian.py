@@ -70,9 +70,9 @@ class Hamiltonian:
         self.F_xmin = np.zeros(Nx-1, dtype=np.complex128)
         self.F_xmin[np.where((g_s[1:]+g_t[1:])[:-1] != 0)] = F_init[1]
         self.F_yplus = np.zeros(Nx, dtype=np.complex128)
-        self.F_yplus[np.where((g_s[1:]+g_t[1:]) != 0)] = F_init[2]
+        self.F_yplus[np.where((g_s+g_t) != 0)] = F_init[2]
         self.F_ymin = np.zeros(Nx, dtype=np.complex128)
-        self.F_ymin[np.where((g_s[1:]+g_t[1:]) != 0)] = F_init[3]
+        self.F_ymin[np.where((g_s+g_t) != 0)] = F_init[3]
 
         self.Fuu_xplus = np.zeros(Nx-1, dtype=np.complex128)
         self.Fuu_xplus[np.where(V_prime[:-1] != 0)] = Fuu_init[0]

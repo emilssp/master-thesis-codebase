@@ -22,14 +22,14 @@ def main():
     mu[:widthS:] = muS
     mu[widthS:] = muP
 
-    V0 = 5.0 * t
-    V = V0 * np.ones(lattice.X)
-    V[widthS:] = 0
+    V0 = 5 * t
+    V = np.zeros(lattice.X)
+    V[:widthS] = V0
     V[widthS-1] = V0/2
 
     V_prime0 = 1.5 * t
-    V_prime = V_prime0 * np.ones(lattice.X)
-    V_prime[:widthS] = 0
+    V_prime = np.zeros(lattice.X)
+    V_prime[widthS:] = V_prime0
     V_prime[widthS-1] = V_prime0/2
 
     U = None
@@ -47,13 +47,13 @@ def main():
     H = Hamiltonian(
         t, mu, lattice,
         U=U, V_prime=V_prime, g_s=V,
-        F_init=[0.5, 0.5, -0.5, -0.5],
-        Fuu_init=[0.1, -0.1, 0.1j, -0.1j],
-        Fdd_init=[0.1, -0.1, 0.1j, -0.1j],
+        F_init=[0.3, 0.3, -0.3, -0.3],
+        Fuu_init=[0.01, -0.01, 0.01j, -0.01j],
+        Fdd_init=[0.01, -0.01, 0.01j, -0.01j],
     )
 
     # Adjust to your actual bdg_sc output
-    bdg_sc(H, maxiter=10000, temperature=temp, rtol=1e-3, atol=1e-6)
+    bdg_sc(H, maxiter=50000, temperature=temp, rtol=1e-3, atol=1e-6)
 
     F0 = H.F0
     F, Fuu, Fdd = H.get_correlations()
@@ -64,15 +64,15 @@ def main():
         idx=idx,
         temp=temp,
         converged=H.converged,
-        F0=F0[int(widthS/2)+1],
-        F_swave=F.swave[int(widthS/2)+1],
-        F_dwave=F.dwave[int(widthS/2)+1],
-        F_px=F.px[int(widthS/2)+1],
-        F_py=F.py[int(widthS/2)+1],
-        Fuu_px=Fuu.px[int(widthS+widthP/2)+1],
-        Fuu_py=Fuu.py[int(widthS+widthP/2)+1],
-        Fdd_px=Fdd.px[int(widthS+widthP/2)+1],
-        Fdd_py=Fdd.py[int(widthS+widthP/2)+1],
+        F0=F0[int(widthS/2)],
+        F_swave=F.swave[int(widthS/2)],
+        F_dwave=F.dwave[int(widthS/2)],
+        F_px=F.px[int(widthS/2)],
+        F_py=F.py[int(widthS/2)],
+        Fuu_px=Fuu.px[int(widthS+widthP/2)-1],
+        Fuu_py=Fuu.py[int(widthS+widthP/2)-1],
+        Fdd_px=Fdd.px[int(widthS+widthP/2)-1],
+        Fdd_py=Fdd.py[int(widthS+widthP/2)-1],
     )
 
     # save parameters for inspection

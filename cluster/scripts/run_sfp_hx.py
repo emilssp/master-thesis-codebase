@@ -66,7 +66,7 @@ def main():
                     Fdd_init=[0.1, -0.1, 0.1j, -0.1j],
                     hx=h)
 
-    bdg_sc(H, atol=1e-6, rtol=1e-3, maxiter=10000, temperature=temp)
+    bdg_sc(H, atol=1e-6, rtol=1e-3, maxiter=30000, temperature=temp)
 
     F0 = H.F0
     F, Fuu, Fdd = H.get_correlations()
@@ -77,15 +77,15 @@ def main():
         idx=idx,
         temp=temp,
         converged=H.converged,
-        F0=F0[int(widthS/2)+1],
-        F_swave=F.swave[int(widthS/2)+1],
-        F_dwave=F.dwave[int(widthS/2)+1],
-        F_px=F.px[int(widthS/2)+1],
-        F_py=F.py[int(widthS/2)+1],
-        Fuu_px=Fuu.px[int(widthS+widthF+widthP/2)],
-        Fuu_py=Fuu.py[int(widthS+widthF+widthP/2)],
-        Fdd_px=Fdd.px[int(widthS+widthF+widthP/2)],
-        Fdd_py=Fdd.py[int(widthS+widthF+widthP/2)],
+        F0=F0[int(widthS/2)],
+        F_swave=F.swave[int(widthS/2)],
+        F_dwave=F.dwave[int(widthS/2)],
+        F_px=F.px[int(widthS/2)],
+        F_py=F.py[int(widthS/2)],
+        Fuu_px=Fuu.px[int(widthS+widthF+widthP/2)-1],
+        Fuu_py=Fuu.py[int(widthS+widthF+widthP/2)-1],
+        Fdd_px=Fdd.px[int(widthS+widthF+widthP/2)-1],
+        Fdd_py=Fdd.py[int(widthS+widthF+widthP/2)-1],
     )
 
     # save parameters for inspection

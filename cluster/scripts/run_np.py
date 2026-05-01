@@ -47,7 +47,7 @@ def main():
 
     # Adjust to your actual bdg_sc output
     F_swave, F_dwave, F_px, F_py = bdg_sc(
-        H, maxiter=10000, temperature=temp,
+        H, maxiter=20000, temperature=temp,
         rtol=1e-3, atol=1e-6
     )
     F0 = H.F0
