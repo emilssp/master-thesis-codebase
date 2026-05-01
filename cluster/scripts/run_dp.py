@@ -16,7 +16,7 @@ def main():
     lattice = Lattice(X, Y)
 
     t = 1
-    muS = 0.1 * t
+    muS = 0.0 * t
     muP = 1.8 * t
     mu = np.zeros(lattice.X)
     mu[:widthS:] = muS
@@ -46,7 +46,7 @@ def main():
 
     H = Hamiltonian(
         t, mu, lattice,
-        U=U, V_prime=V_prime, V=V,
+        U=U, V_prime=V_prime, g_s=V,
         F_init=[0.5, 0.5, -0.5, -0.5],
         Fuu_init=[0.1, -0.1, 0.1j, -0.1j],
         Fdd_init=[0.1, -0.1, 0.1j, -0.1j],

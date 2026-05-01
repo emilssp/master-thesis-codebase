@@ -32,7 +32,7 @@ def main():
     V[widthN-1] = V0/2
 
     H = Hamiltonian(t, mu, lattice,
-                    U=U, V_prime=V_prime, V=V,
+                    U=U, V_prime=V_prime, g_t=V,
                     F_init=[0.1, -0.1, 0.1j, -0.1j])
 
     temps = np.concatenate([
@@ -56,6 +56,7 @@ def main():
         f"data/NP/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
+        converged=H.converged,
         F0=F0[int(widthN+widthP/2)-1],
         F_swave=F_swave[int(widthN+widthP/2)-1],
         F_dwave=F_dwave[int(widthN+widthP/2)-1],

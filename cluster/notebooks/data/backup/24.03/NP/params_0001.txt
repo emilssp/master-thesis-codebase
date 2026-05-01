@@ -1,0 +1,9 @@
+widthN = 5
+widthP = 10
+X = 15
+Y = 200
+muS = 1.2
+muP = 1.8
+U0 = 0
+V0 = 1.5
+V_prime = 0

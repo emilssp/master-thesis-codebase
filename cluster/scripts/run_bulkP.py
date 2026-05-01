@@ -34,7 +34,7 @@ def main():
 
     H = Hamiltonian(
         t, mu, lattice,
-        U=U, V_prime=V_prime, V=V,
+        U=U, V_prime=V_prime, g_t=V,
         F_init=[0.1, -0.1, 0.1j, -0.1j],
     )
 
@@ -49,6 +49,7 @@ def main():
         f"data/bulkP/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
+        converged=H.converged,
         F0=F0[int(X/2)],
         F_swave=F_swave[int(X/2)],
         F_dwave=F_dwave[int(X/2)],

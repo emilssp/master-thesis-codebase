@@ -54,7 +54,7 @@ def main():
 
     H = Hamiltonian(
         t, mu, lattice,
-        U=U, V_prime=V_prime, V=V,
+        U=U, V_prime=V_prime, g_t=V,
         F0_init=0.1, hz=hz,
         F_init=[0.1, -0.1, 0.1j, -0.1j],
     )
@@ -70,6 +70,7 @@ def main():
         f"data/SFP/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
+        converged=H.converged,
         F0=F0[int(widthS/2)-1],
         F_swave=F_swave[int(widthS+widthF+widthP/2)-1],
         F_dwave=F_dwave[int(widthS+widthF+widthP/2)-1],

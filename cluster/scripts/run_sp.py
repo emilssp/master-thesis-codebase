@@ -46,7 +46,7 @@ def main():
 
     H = Hamiltonian(
         t, mu, lattice,
-        U=U, V_prime=V_prime, V=V,
+        U=U, V_prime=V_prime, g_t=V,
         F0_init=0.1,
         F_init=[0.1, -0.1, 0.1j, -0.1j],
     )
@@ -62,6 +62,7 @@ def main():
         f"data/SP/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
+        converged=H.converged,
         F0=F0[int(widthS/2)-1],
         F_swave=F_swave[int(widthS+widthP/2)-1],
         F_dwave=F_dwave[int(widthS+widthP/2)-1],

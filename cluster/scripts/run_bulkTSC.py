@@ -27,13 +27,12 @@ def main():
     print(f"Running job {idx} out of {len(temps)}")
 
     U = np.zeros(lattice.X)
-    V = np.zeros(lattice.X)
     V0 = 1.5 * t
     V_prime = V0 * np.ones(lattice.X)
 
     H = Hamiltonian(
         t, mu, lattice,
-        U=U, V_prime=V_prime, V=V,
+        U=U, V_prime=V_prime,
         Fuu_init=[0.1, -0.1, 0.1j, -0.1j],
         Fdd_init=[0.1, -0.1, 0.1j, -0.1j],
     )

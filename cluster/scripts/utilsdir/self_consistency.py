@@ -21,7 +21,10 @@ Corr = namedtuple(
 
 def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
            atol=1e-6, rtol=1e-4, maxiter=100,
-           verbose=False):
+           mixing=1.0, verbose=False):
+
+    if not (0.0 < mixing <= 1.0):
+        raise ValueError("mixing must satisfy 0 < mixing <= 1")
 
     converged = False
     Ny = H.lattice.Y
@@ -273,12 +276,20 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             Fuu_xplus, Fuu_xmin, Fuu_yplus, Fuu_ymin,
             Fdd_xplus, Fdd_xmin, Fdd_yplus, Fdd_ymin,
         )
-        corr_new = Corr(
+        corr_raw = Corr(
             F0_new,
             F_xplus_new, F_xmin_new, F_yplus_new, F_ymin_new,
             Fuu_xplus_new, Fuu_xmin_new, Fuu_yplus_new, Fuu_ymin_new,
             Fdd_xplus_new, Fdd_xmin_new, Fdd_yplus_new, Fdd_ymin_new
         )
+
+        # Linear mixing / under-relaxation:
+        #   corr_new = (1 - mixing) * corr_old + mixing * corr_raw
+        # Smaller mixing values are more stable but may converge more slowly.
+        corr_new = Corr(*[
+            (1.0 - mixing) * old + mixing * new
+            for old, new in zip(corr, corr_raw)
+        ])
 
         if verbose:
             print('============================================')
@@ -299,22 +310,22 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
                 print(f"Average: {np.mean(corr_new[idx])}")
             print(f"Iteration {iteration + 1}.")
 
-        F0 = F0_new.copy()
+        F0 = (1.0 - mixing) * F0 + mixing * F0_new.copy()
 
-        F_xplus = F_xplus_new.copy()
-        F_xmin = F_xmin_new.copy()
-        F_yplus = F_yplus_new.copy()
-        F_ymin = F_ymin_new.copy()
+        F_xplus = (1.0 - mixing) * F_xplus + mixing * F_xplus_new.copy()
+        F_xmin = (1.0 - mixing) * F_xmin + mixing * F_xmin_new.copy()
+        F_yplus = (1.0 - mixing) * F_yplus + mixing * F_yplus_new.copy()
+        F_ymin = (1.0 - mixing) * F_ymin + mixing * F_ymin_new.copy()
 
-        Fuu_xplus = Fuu_xplus_new.copy()
-        Fuu_xmin = Fuu_xmin_new.copy()
-        Fuu_yplus = Fuu_yplus_new.copy()
-        Fuu_ymin = Fuu_ymin_new.copy()
+        Fuu_xplus = (1.0 - mixing) * Fuu_xplus + mixing * Fuu_xplus_new.copy()
+        Fuu_xmin = (1.0 - mixing) * Fuu_xmin + mixing * Fuu_xmin_new.copy()
+        Fuu_yplus = (1.0 - mixing) * Fuu_yplus + mixing * Fuu_yplus_new.copy()
+        Fuu_ymin = (1.0 - mixing) * Fuu_ymin + mixing * Fuu_ymin_new.copy()
 
-        Fdd_xplus = Fdd_xplus_new.copy()
-        Fdd_xmin = Fdd_xmin_new.copy()
-        Fdd_yplus = Fdd_yplus_new.copy()
-        Fdd_ymin = Fdd_ymin_new.copy()
+        Fdd_xplus = (1.0 - mixing) * Fdd_xplus + mixing * Fdd_xplus_new.copy()
+        Fdd_xmin = (1.0 - mixing) * Fdd_xmin + mixing * Fdd_xmin_new.copy()
+        Fdd_yplus = (1.0 - mixing) * Fdd_yplus + mixing * Fdd_yplus_new.copy()
+        Fdd_ymin = (1.0 - mixing) * Fdd_ymin + mixing * Fdd_ymin_new.copy()
 
         H.set_correlations(corr_new)
         if is_converged(corr, corr_new, atol, rtol):
