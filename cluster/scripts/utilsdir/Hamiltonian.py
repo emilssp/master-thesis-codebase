@@ -66,9 +66,9 @@ class Hamiltonian:
         self.F0 = np.zeros(Nx, dtype=np.complex128)
         self.F0[np.where(U != 0)] = F0_init
         self.F_xplus = np.zeros(Nx-1, dtype=np.complex128)
-        self.F_xplus[np.where((g_s[1:]+g_t[1:]) != 0)] = F_init[0]
+        self.F_xplus[np.where((g_s+g_t)[:-1] != 0)] = F_init[0]
         self.F_xmin = np.zeros(Nx-1, dtype=np.complex128)
-        self.F_xmin[np.where((g_s[1:]+g_t[1:])[:-1] != 0)] = F_init[1]
+        self.F_xmin[np.where((g_s+g_t)[:-1] != 0)] = F_init[1]
         self.F_yplus = np.zeros(Nx, dtype=np.complex128)
         self.F_yplus[np.where((g_s+g_t) != 0)] = F_init[2]
         self.F_ymin = np.zeros(Nx, dtype=np.complex128)
@@ -77,7 +77,7 @@ class Hamiltonian:
         self.Fuu_xplus = np.zeros(Nx-1, dtype=np.complex128)
         self.Fuu_xplus[np.where(V_prime[:-1] != 0)] = Fuu_init[0]
         self.Fuu_xmin = np.zeros(Nx-1, dtype=np.complex128)
-        self.Fuu_xmin[np.where(V_prime[1:] != 0)] = Fuu_init[1]
+        self.Fuu_xmin[np.where(V_prime[:-1] != 0)] = Fuu_init[1]
         self.Fuu_yplus = np.zeros(Nx, dtype=np.complex128)
         self.Fuu_yplus[np.where(V_prime != 0)] = Fuu_init[2]
         self.Fuu_ymin = np.zeros(Nx, dtype=np.complex128)
@@ -86,7 +86,7 @@ class Hamiltonian:
         self.Fdd_xplus = np.zeros(Nx-1, dtype=np.complex128)
         self.Fdd_xplus[np.where(V_prime[:-1] != 0)] = Fdd_init[0]
         self.Fdd_xmin = np.zeros(Nx-1, dtype=np.complex128)
-        self.Fdd_xmin[np.where(V_prime[1:] != 0)] = Fdd_init[1]
+        self.Fdd_xmin[np.where(V_prime[:-1] != 0)] = Fdd_init[1]
         self.Fdd_yplus = np.zeros(Nx, dtype=np.complex128)
         self.Fdd_yplus[np.where(V_prime != 0)] = Fdd_init[2]
         self.Fdd_ymin = np.zeros(Nx, dtype=np.complex128)
@@ -248,9 +248,9 @@ class Hamiltonian:
         FT_y_plus = (self.F_yplus - self.F_ymin) / 2
         FT_y_min = (self.F_ymin - self.F_yplus) / 2
 
-        F_swave = (np.r_[0, FS_x] + np.r_[FS_x, 0] + 2.0 * FS_y) / 4.0
-        F_dwave = (np.r_[0, FS_x] + np.r_[FS_x, 0] - 2.0 * FS_y) / 4.0
-        F_px = (np.r_[0, FT_x_plus] - np.r_[FT_x_min, 0]) / 2.0
+        F_swave = (np.r_[FS_x, 0] + np.r_[FS_x, 0] + 2.0 * FS_y) / 4.0
+        F_dwave = (np.r_[FS_x, 0] + np.r_[FS_x, 0] - 2.0 * FS_y) / 4.0
+        F_px = (np.r_[FT_x_plus, 0] - np.r_[FT_x_min, 0]) / 2.0
         F_py = (FT_y_plus - FT_y_min) / 2.0
 
         F = PairCorrelations(
@@ -270,9 +270,9 @@ class Hamiltonian:
         Fdd_y_plus = (self.Fdd_yplus - self.Fdd_ymin) / 2
         Fdd_y_min = (self.Fdd_ymin - self.Fdd_yplus) / 2
 
-        Fuu_px = (np.r_[0, Fuu_x_plus] - np.r_[Fuu_x_min, 0]) / 2.0
+        Fuu_px = (np.r_[Fuu_x_plus, 0] - np.r_[Fuu_x_min, 0]) / 2.0
         Fuu_py = (Fuu_y_plus - Fuu_y_min) / 2.0
-        Fdd_px = (np.r_[0, Fdd_x_plus] - np.r_[Fdd_x_min, 0]) / 2.0
+        Fdd_px = (np.r_[Fdd_x_plus, 0] - np.r_[Fdd_x_min, 0]) / 2.0
         Fdd_py = (Fdd_y_plus - Fdd_y_min) / 2.0
 
         Fuu = PairCorrelations(

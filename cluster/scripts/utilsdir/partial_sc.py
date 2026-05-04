@@ -19,9 +19,10 @@ Corr = namedtuple(
 )
 
 
-def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
-           atol=1e-6, rtol=1e-4, maxiter=100,
-           mixing=1.0, verbose=False):
+def partial_sc(H: Hamiltonian, temperature, # Hamiltonian
+               fixed_sites=None, fixed_syms=None,
+               atol=1e-6, rtol=1e-4, maxiter=100,
+               mixing=1.0, verbose=False):
 
     if not (0.0 < mixing <= 1.0):
         raise ValueError("mixing must satisfy 0 < mixing <= 1")
@@ -30,6 +31,16 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
     Ny = H.lattice.Y
     Nx = H.lattice.X
     ky_list = np.linspace(PI / Ny, PI, Ny, endpoint=True)
+
+    if fixed_sites is None or fixed_syms is None:
+        fixed_sites=np.zeros(Nx, dtype=bool)
+        fixed_syms_idx=[]
+    else:
+        name_to_idx = {name: i for i, name in enumerate(Corr._fields)}
+        try:
+            fixed_syms_idx = {name_to_idx[name] for name in fixed_syms}
+        except KeyError as e:
+            raise ValueError(f"Invalid correlation name: {e.args[0]}")
 
     F0 = H.F0.copy()
     F_xplus = H.F_xplus.copy()
@@ -145,6 +156,15 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             np.einsum('nm,nm,nm->n', u_dn0, np.conj(v_dn0), f_E0)
         ) / Ny
 
+        # Singlet / triplet symmetry parts
+        FS_x = (Fx0_ux1 + Fx0_ux2 + Fx0_vw1 + Fx0_vw2).conj() / (2.0 * Ny)
+        FS_y = F0_new.copy()
+
+        FT_x_plus = (Fx0_ux1 - Fx0_ux2 + Fx0_vw2 - Fx0_vw1).conj() / (2.0 * Ny)
+        FT_x_min = (Fx0_ux2 - Fx0_ux1 + Fx0_vw1 - Fx0_vw2).conj() / (2.0 * Ny)
+        FT_y_plus = np.zeros(Nx, dtype=np.complex128)
+        FT_y_min = np.zeros(Nx, dtype=np.complex128)
+
         for ky in ky_list:
             H_k = H.build_H_k(ky)
             H2 = H_kindep + H_k
@@ -244,6 +264,23 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             F_yplus_new += (F_ux * ep + F_vw * em) / Ny
             F_ymin_new += (F_ux * em + F_vw * ep) / Ny
 
+            # Singlet component
+            FS_x += (Fx_ux1 + Fx_ux2 + Fx_vw1 + Fx_vw2) / (2.0 * Ny)
+            FS_y += (F_ux + F_vw) * np.cos(ky) / Ny
+
+            # Triplet component
+            FT_x_plus += (Fx_ux1 + Fx_vw2 - Fx_ux2 - Fx_vw1) / (2.0 * Ny)
+            FT_x_min += (Fx_ux2 - Fx_ux1 + Fx_vw1 - Fx_vw2) / (2.0 * Ny)
+
+            FT_y_plus += 1j * (F_ux - F_vw) * np.sin(ky) / Ny
+            FT_y_min -= 1j * (F_ux - F_vw) * np.sin(ky) / Ny
+
+        # Filtering out s, d, px, py (same algebra as MATLAB)
+        F_swave = (np.r_[0, FS_x] + np.r_[FS_x, 0] + 2.0 * FS_y) / 4.0
+        F_dwave = (np.r_[0, FS_x] + np.r_[FS_x, 0] - 2.0 * FS_y) / 4.0
+        F_px = (np.r_[0, FT_x_plus] - np.r_[FT_x_min, 0]) / 2.0
+        F_py = (FT_y_plus - FT_y_min) / 2.0
+
         corr = Corr(
             F0,
             F_xplus, F_xmin, F_yplus, F_ymin,
@@ -257,12 +294,15 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             Fdd_xplus_new, Fdd_xmin_new, Fdd_yplus_new, Fdd_ymin_new
         )
 
-        # Linear mixing / under-relaxation:
-        #   corr_new = (1 - mixing) * corr_old + mixing * corr_raw
-        # Smaller mixing values are more stable but may converge more slowly.
+        # Linear mixing / under-relaxation, except at fixed sites.
+        # fixed[i] == True means all correlations at site i are held fixed.
         corr_new = Corr(*[
-            (1.0 - mixing) * old + mixing * new
-            for old, new in zip(corr, corr_raw)
+            np.where(
+                fixed_sites[:old.shape[0]],
+                old,
+                (1.0 - mixing) * old + mixing * new
+            ) if i in fixed_syms_idx else (1.0 - mixing) * old + mixing * new
+            for i, (old, new) in enumerate(zip(corr, corr_raw))
         ])
 
         if verbose:
@@ -306,3 +346,5 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
         print("==================================================")
 
     H.converged = converged
+
+    return F_swave, F_dwave, F_px, F_py

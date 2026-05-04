@@ -66,9 +66,9 @@ class Hamiltonian:
         self.F0 = np.zeros(Nx, dtype=np.complex128)
         self.F0[np.where(U != 0)] = F0_init
         self.F_xplus = np.zeros(Nx-1, dtype=np.complex128)
-        self.F_xplus[np.where((g_s[:-1]+g_t[:-1]) != 0)] = F_init[0]
+        self.F_xplus[np.where((g_s+g_t)[:-1] != 0)] = F_init[0]
         self.F_xmin = np.zeros(Nx-1, dtype=np.complex128)
-        self.F_xmin[np.where((g_s[1:]+g_t[1:]) != 0)] = F_init[1]
+        self.F_xmin[np.where((g_s+g_t)[:-1] != 0)] = F_init[1]
         self.F_yplus = np.zeros(Nx, dtype=np.complex128)
         self.F_yplus[np.where((g_s+g_t) != 0)] = F_init[2]
         self.F_ymin = np.zeros(Nx, dtype=np.complex128)
@@ -77,7 +77,7 @@ class Hamiltonian:
         self.Fuu_xplus = np.zeros(Nx-1, dtype=np.complex128)
         self.Fuu_xplus[np.where(V_prime[:-1] != 0)] = Fuu_init[0]
         self.Fuu_xmin = np.zeros(Nx-1, dtype=np.complex128)
-        self.Fuu_xmin[np.where(V_prime[1:] != 0)] = Fuu_init[1]
+        self.Fuu_xmin[np.where(V_prime[:-1] != 0)] = Fuu_init[1]
         self.Fuu_yplus = np.zeros(Nx, dtype=np.complex128)
         self.Fuu_yplus[np.where(V_prime != 0)] = Fuu_init[2]
         self.Fuu_ymin = np.zeros(Nx, dtype=np.complex128)
@@ -86,7 +86,7 @@ class Hamiltonian:
         self.Fdd_xplus = np.zeros(Nx-1, dtype=np.complex128)
         self.Fdd_xplus[np.where(V_prime[:-1] != 0)] = Fdd_init[0]
         self.Fdd_xmin = np.zeros(Nx-1, dtype=np.complex128)
-        self.Fdd_xmin[np.where(V_prime[1:] != 0)] = Fdd_init[1]
+        self.Fdd_xmin[np.where(V_prime[:-1] != 0)] = Fdd_init[1]
         self.Fdd_yplus = np.zeros(Nx, dtype=np.complex128)
         self.Fdd_yplus[np.where(V_prime != 0)] = Fdd_init[2]
         self.Fdd_ymin = np.zeros(Nx, dtype=np.complex128)

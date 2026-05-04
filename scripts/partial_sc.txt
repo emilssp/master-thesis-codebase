@@ -19,7 +19,7 @@ Corr = namedtuple(
 )
 
 
-def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
+def partial_sc(H: Hamiltonian, temperature, fixed # Hamiltonian
            atol=1e-6, rtol=1e-4, maxiter=100,
            mixing=1.0, verbose=False):
 
