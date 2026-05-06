@@ -10,9 +10,9 @@ from utilsdir.self_consistency import bdg_sc
 def main():
     idx = int(sys.argv[1])
 
-    widthS = 10
+    widthS = 5
     widthF = 1
-    widthP = 30
+    widthP = 10
 
     X, Y = widthS+widthF+widthP, 200
     lattice = Lattice(X, Y)
@@ -38,17 +38,22 @@ def main():
     U[widthS:] = 0
     U[widthS-1] = U0/2
 
-    V_prime0 = 2 * t
+    V_prime0 = 1.5 * t
     V_prime = V_prime0 * np.ones(lattice.X)
     V_prime[:widthF+widthS] = 0
     V_prime[widthF+widthS] = V_prime0/2
 
+    # temps = np.concatenate([
+    #     np.arange(0.001, 0.009 + 1e-12, 0.001),
+    #     np.arange(0.01, 0.30 + 1e-12, 0.01),
+    #     np.arange(0.31, 0.60 + 1e-12, 0.002)
+    # ])  # 185 temps total
+
     temps = np.concatenate([
-        np.arange(0.001, 0.009 + 1e-12, 0.001),
-        np.arange(0.010, 0.100 + 1e-12, 0.001),
-        np.arange(0.1005, 0.1400 + 1e-12, 0.0005),
-        np.arange(0.141, 0.200 + 1e-12, 0.001),
-    ])  # 240 temps total
+        np.array([0.001]),  # add a very low temp for testing
+        np.arange(0.01, 0.20 + 1e-12, 0.01),
+        np.arange(0.21, 0.60 + 1e-12, 0.002),
+    ])  # 217 temps total
 
     temp = temps[idx]
 
@@ -57,8 +62,8 @@ def main():
     H = Hamiltonian(t, mu, lattice,
                     U=U, V_prime=V_prime,
                     F0_init=0.5,
-                    Fuu_init=[0.01, -0.01, 0.01j, -0.01j],
-                    Fdd_init=[0.01, -0.01, 0.01j, -0.01j],
+                    Fuu_init=[0.1, -0.1, 0.1j, -0.1j],
+                    Fdd_init=[0.1, -0.1, 0.1j, -0.1j],
                     hx=h)
 
     bdg_sc(H, atol=1e-6, rtol=1e-3, maxiter=30000, temperature=temp)

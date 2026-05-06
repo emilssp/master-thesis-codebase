@@ -2,9 +2,9 @@
 #SBATCH --job-name=SFP_partial
 #SBATCH --output=logs/SFP_partial-%A_%a.out
 #SBATCH --error=logs/SFP_partial-%A_%a.err
-#SBATCH --array=0-216
+#SBATCH --array=0-239
 #SBATCH --cpus-per-task=4
-#SBATCH --time=24:00:00
+#SBATCH --time=32:00:00
 #SBATCH --partition=fpgaq
 
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}

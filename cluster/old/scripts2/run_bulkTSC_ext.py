@@ -30,7 +30,7 @@ def main():
     V0 = 1.5 * t
     V_prime = V0 * np.ones(lattice.X)
 
-    hz0 = 3 * t
+    hz0 = 1 * t
     hz = np.ones_like(mu) * hz0
 
     H = Hamiltonian(

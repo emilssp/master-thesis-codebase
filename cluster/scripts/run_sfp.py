@@ -10,9 +10,9 @@ from utilsdir.self_consistency import bdg_sc
 def main():
     idx = int(sys.argv[1])
 
-    widthS = 5
+    widthS = 10
     widthF = 1
-    widthP = 10
+    widthP = 30
 
     X, Y = widthS+widthF+widthP, 200
     lattice = Lattice(X, Y)
@@ -36,7 +36,7 @@ def main():
     U[widthS:] = 0
     U[widthS-1] = U0/2
 
-    V0 = 1.5 * t
+    V0 = 2 * t
     V = V0 * np.ones(lattice.X)
     V[:widthF+widthS] = 0
     V[widthF+widthS-1] = V0/2
@@ -44,10 +44,12 @@ def main():
     V_prime = None
 
     temps = np.concatenate([
-        np.array([0.001]),  # add a very low temp for testing
-        np.arange(0.01, 0.20 + 1e-12, 0.01),
-        np.arange(0.21, 0.60 + 1e-12, 0.002),
-    ])  # 217 temps total
+        np.arange(0.001, 0.009 + 1e-12, 0.001),
+        np.arange(0.010, 0.100 + 1e-12, 0.001),
+        np.arange(0.1005, 0.1400 + 1e-12, 0.0005),
+        np.arange(0.141, 0.200 + 1e-12, 0.001),
+    ])  # 240 temps total
+
     temp = temps[idx]
 
     print(f"Running job {idx} out of {len(temps)}")

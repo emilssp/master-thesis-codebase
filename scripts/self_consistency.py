@@ -29,7 +29,7 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
     converged = False
     Ny = H.lattice.Y
     Nx = H.lattice.X
-    ky_list = np.linspace(PI / Ny, PI, Ny, endpoint=True)
+    ky_list = np.linspace(PI / Ny, PI, Ny//2, endpoint=True)
 
     F0 = H.F0.copy()
     F_xplus = H.F_xplus.copy()
@@ -130,7 +130,7 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
 
         Fdd_xmin_new = (
             np.einsum('nm,nm,nm->n',
-                      u_dn0[1:, :], np.conj(v_dn0[:-1, :]), (1 - f_E0)[1:, :])
+                      u_dn0[1:, :], np.conj(v_dn0[:-1, :]), (1 - f_E0[1:, :]))
             + np.einsum('nm,nm,nm->n',
                         u_dn0[:-1, :], np.conj(v_dn0)[1:, :], f_E0[:-1, :])
         ) / Ny
@@ -233,7 +233,7 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             ) / Ny
 
             Fdd_ymin_new += (
-                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), (1.0 - f_E))*em +
+                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), (1-f_E))*em +
                 np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), f_E)*ep
             ) / Ny
 

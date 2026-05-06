@@ -10,8 +10,8 @@ from utilsdir.self_consistency import bdg_sc
 def main():
     idx = int(sys.argv[1])
 
-    widthN = 10
-    widthP = 40
+    widthN = 5
+    widthP = 10
 
     X, Y = widthN+widthP, 200
     lattice = Lattice(X, Y)
@@ -26,20 +26,20 @@ def main():
     U = None
     V_prime = None
 
-    V0 = 2 * t
+    V0 = 1.5 * t
     V = V0 * np.ones(lattice.X)
     V[:widthN] = 0
     V[widthN-1] = V0/2
 
     H = Hamiltonian(t, mu, lattice,
                     U=U, V_prime=V_prime, g_t=V,
-                    F_init=[0.01, -0.01, 0.01j, -0.01j])
+                    F_init=[0.1, -0.1, 0.1j, -0.1j])
 
     temps = np.concatenate([
-        np.arange(0.001, 0.100 + 1e-12, 0.005),
-        np.arange(0.102, 0.120+1e-12, 0.0001),
-        np.arange(0.125, 0.150 + 1e-12, 0.005),
-    ])  # 207 temps total
+        np.array([0.001]),  # add a very low temp for testing
+        np.arange(0.01, 0.20 + 1e-12, 0.01),
+        np.arange(0.21, 0.60 + 1e-12, 0.002),
+    ])  # 217 temps total
 
     temp = temps[idx]
 

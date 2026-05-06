@@ -4,7 +4,7 @@ import numpy as np
 
 from utilsdir.Hamiltonian import Hamiltonian
 from utilsdir.Lattice import Lattice
-from utilsdir.self_consistency import bdg_sc
+from utilsdir.partial_sc import partial_sc
 
 
 def main():
@@ -56,19 +56,23 @@ def main():
 
     H = Hamiltonian(t, mu, lattice,
                     U=U, V_prime=V_prime,
-                    F0_init=0.5,
+                    F0_init=0.375,
                     Fuu_init=[0.01, -0.01, 0.01j, -0.01j],
                     Fdd_init=[0.01, -0.01, 0.01j, -0.01j],
                     hx=h)
 
-    bdg_sc(H, atol=1e-6, rtol=1e-3, maxiter=30000, temperature=temp)
+    fixed_sites = U > 0
+    fixed_syms = ["F0"]
+    partial_sc(H, temperature=temp, 
+               fixed_sites=fixed_sites, fixed_syms=fixed_syms, 
+               atol=1e-6, rtol=1e-3, maxiter=20000, mixing=0.6)
 
     F0 = H.F0
     F, Fuu, Fdd = H.get_correlations()
 
-    os.makedirs("data/SFP_hx", exist_ok=True)
+    os.makedirs("data/SFP_hx_partial", exist_ok=True)
     np.savez(
-        f"data/SFP_hx/temp_{idx:04d}.npz",
+        f"data/SFP_hx_partial/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
         converged=H.converged,
@@ -100,7 +104,7 @@ def main():
             "V_prime": V_prime0,
         }
 
-        param_file = f"data/DFP_hx/params_{idx:04d}.txt"
+        param_file = f"data/DFP_hx_partial/params_{idx:04d}.txt"
         with open(param_file, "w") as f:
             for key, value in params.items():
                 f.write(f"{key} = {value}\n")

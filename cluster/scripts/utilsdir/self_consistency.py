@@ -29,7 +29,7 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
     converged = False
     Ny = H.lattice.Y
     Nx = H.lattice.X
-    ky_list = np.linspace(PI / Ny, PI, Ny, endpoint=True)
+    ky_list = np.linspace(PI / Ny, PI, Ny//2, endpoint=True)
 
     F0 = H.F0.copy()
     F_xplus = H.F_xplus.copy()
@@ -130,7 +130,7 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
 
         Fdd_xmin_new = (
             np.einsum('nm,nm,nm->n',
-                      u_dn0[1:, :], np.conj(v_dn0[:-1, :]), (1 - f_E0)[1:, :])
+                      u_dn0[1:, :], np.conj(v_dn0[:-1, :]), (1 - f_E0[1:, :]))
             + np.einsum('nm,nm,nm->n',
                         u_dn0[:-1, :], np.conj(v_dn0)[1:, :], f_E0[:-1, :])
         ) / Ny
@@ -144,15 +144,6 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             np.einsum('nm,nm,nm->n', u_dn0, np.conj(v_dn0), (1.0 - f_E0)) +
             np.einsum('nm,nm,nm->n', u_dn0, np.conj(v_dn0), f_E0)
         ) / Ny
-
-        # Singlet / triplet symmetry parts
-        FS_x = (Fx0_ux1 + Fx0_ux2 + Fx0_vw1 + Fx0_vw2).conj() / (2.0 * Ny)
-        FS_y = F0_new.copy()
-
-        FT_x_plus = (Fx0_ux1 - Fx0_ux2 + Fx0_vw2 - Fx0_vw1).conj() / (2.0 * Ny)
-        FT_x_min = (Fx0_ux2 - Fx0_ux1 + Fx0_vw1 - Fx0_vw2).conj() / (2.0 * Ny)
-        FT_y_plus = np.zeros(Nx, dtype=np.complex128)
-        FT_y_min = np.zeros(Nx, dtype=np.complex128)
 
         for ky in ky_list:
             H_k = H.build_H_k(ky)
@@ -242,7 +233,7 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             ) / Ny
 
             Fdd_ymin_new += (
-                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), (1.0 - f_E))*em +
+                np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), (1-f_E))*em +
                 np.einsum('nm,nm,nm->n', u_dn, np.conj(v_dn), f_E)*ep
             ) / Ny
 
@@ -252,23 +243,6 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             F_xmin_new += (Fx_ux2 + Fx_vw1) / Ny
             F_yplus_new += (F_ux * ep + F_vw * em) / Ny
             F_ymin_new += (F_ux * em + F_vw * ep) / Ny
-
-            # Singlet component
-            FS_x += (Fx_ux1 + Fx_ux2 + Fx_vw1 + Fx_vw2) / (2.0 * Ny)
-            FS_y += (F_ux + F_vw) * np.cos(ky) / Ny
-
-            # Triplet component
-            FT_x_plus += (Fx_ux1 + Fx_vw2 - Fx_ux2 - Fx_vw1) / (2.0 * Ny)
-            FT_x_min += (Fx_ux2 - Fx_ux1 + Fx_vw1 - Fx_vw2) / (2.0 * Ny)
-
-            FT_y_plus += 1j * (F_ux - F_vw) * np.sin(ky) / Ny
-            FT_y_min -= 1j * (F_ux - F_vw) * np.sin(ky) / Ny
-
-        # Filtering out s, d, px, py (same algebra as MATLAB)
-        F_swave = (np.r_[0, FS_x] + np.r_[FS_x, 0] + 2.0 * FS_y) / 4.0
-        F_dwave = (np.r_[0, FS_x] + np.r_[FS_x, 0] - 2.0 * FS_y) / 4.0
-        F_px = (np.r_[0, FT_x_plus] - np.r_[FT_x_min, 0]) / 2.0
-        F_py = (FT_y_plus - FT_y_min) / 2.0
 
         corr = Corr(
             F0,
@@ -310,22 +284,12 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
                 print(f"Average: {np.mean(corr_new[idx])}")
             print(f"Iteration {iteration + 1}.")
 
-        F0 = (1.0 - mixing) * F0 + mixing * F0_new.copy()
-
-        F_xplus = (1.0 - mixing) * F_xplus + mixing * F_xplus_new.copy()
-        F_xmin = (1.0 - mixing) * F_xmin + mixing * F_xmin_new.copy()
-        F_yplus = (1.0 - mixing) * F_yplus + mixing * F_yplus_new.copy()
-        F_ymin = (1.0 - mixing) * F_ymin + mixing * F_ymin_new.copy()
-
-        Fuu_xplus = (1.0 - mixing) * Fuu_xplus + mixing * Fuu_xplus_new.copy()
-        Fuu_xmin = (1.0 - mixing) * Fuu_xmin + mixing * Fuu_xmin_new.copy()
-        Fuu_yplus = (1.0 - mixing) * Fuu_yplus + mixing * Fuu_yplus_new.copy()
-        Fuu_ymin = (1.0 - mixing) * Fuu_ymin + mixing * Fuu_ymin_new.copy()
-
-        Fdd_xplus = (1.0 - mixing) * Fdd_xplus + mixing * Fdd_xplus_new.copy()
-        Fdd_xmin = (1.0 - mixing) * Fdd_xmin + mixing * Fdd_xmin_new.copy()
-        Fdd_yplus = (1.0 - mixing) * Fdd_yplus + mixing * Fdd_yplus_new.copy()
-        Fdd_ymin = (1.0 - mixing) * Fdd_ymin + mixing * Fdd_ymin_new.copy()
+        (
+            F0,
+            F_xplus, F_xmin, F_yplus, F_ymin,
+            Fuu_xplus, Fuu_xmin, Fuu_yplus, Fuu_ymin,
+            Fdd_xplus, Fdd_xmin, Fdd_yplus, Fdd_ymin,
+        ) = corr_new
 
         H.set_correlations(corr_new)
         if is_converged(corr, corr_new, atol, rtol):
@@ -342,5 +306,3 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
         print("==================================================")
 
     H.converged = converged
-
-    return F_swave, F_dwave, F_px, F_py

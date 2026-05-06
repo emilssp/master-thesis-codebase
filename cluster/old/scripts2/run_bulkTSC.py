@@ -10,31 +10,31 @@ from utilsdir.self_consistency import bdg_sc
 def main():
     idx = int(sys.argv[1])
 
-    X, Y = 40, 200
+    X, Y = 10, 200
     t = 1.0
     lattice = Lattice(X, Y)
 
     mu = 1.8 * t * np.ones(lattice.X)
 
     temps = np.concatenate([
-        np.arange(0.001, 0.100 + 1e-12, 0.005),
-        np.arange(0.102, 0.120+1e-12, 0.0001),
-        np.arange(0.125, 0.150 + 1e-12, 0.005),
-    ])  # 207 temps total
-
+        np.arange(0.001, 0.009 + 1e-12, 0.001),
+        np.arange(0.01, 0.30 + 1e-12, 0.01),
+        np.arange(0.31, 0.41 + 1e-12, 0.001),
+        np.arange(0.42, 0.60 + 1e-12, 0.002)
+    ])  # 231 temps total
     temp = temps[idx]
 
     print(f"Running job {idx} out of {len(temps)}")
 
-    U = None
-    V0 = 2 * t
+    U = np.zeros(lattice.X)
+    V0 = 1.5 * t
     V_prime = V0 * np.ones(lattice.X)
 
     H = Hamiltonian(
         t, mu, lattice,
         U=U, V_prime=V_prime,
-        Fuu_init=[0.01, -0.01, 0.01j, -0.01j],
-        Fdd_init=[0.01, -0.01, 0.01j, -0.01j],
+        Fuu_init=[0.01, -0.01, 0.1j, -0.1j],
+        Fdd_init=[0.01, -0.01, 0.1j, -0.1j],
     )
 
     # Adjust to your actual bdg_sc output
