@@ -10,16 +10,16 @@ from phase_utils import flatten_df
 
 initial_seeds = np.array([
     [0, 0, 0, 0],  # normal state
-    [0.1, -0.1, 0, 0],  # px
-    [0, 0, 0.1, -0.1],  # py
-    [0.1, -0.1, 0.1, -0.1],  # px + py
-    [0.1, -0.1, 0.1j, -0.1j],  # px + i*py
-    [0.1, 0.1, -0.1, -0.1],  # d-wave
-    [0.1+0.1, 0.1-0.1, -0.1, -0.1],  # d-wave + px
-    [0.1, 0.1, -0.1+0.1, -0.1-0.1],  # d-wave + py
-    [0.1, 0.1, 0.1, 0.1],  # s-wave
-    [0.1+0.1, 0.1-0.1, 0.1, 0.1],  # s-wave + px
-    [0.1, 0.1, 0.1+0.1, 0.1-0.1]  # s-wave + py
+    [0.01, -0.01, 0, 0],  # px
+    [0, 0, 0.01, -0.01],  # py
+    [0.01, -0.01, 0.01, -0.01],  # px + py
+    [0.01, -0.01, 0.01j, -0.01j],  # px + i*py
+    [0.01, 0.01, -0.01, -0.01],  # d-wave
+    [0.01+0.01, 0.01-0.01, -0.01, -0.01],  # d-wave + px
+    [0.01, 0.01, -0.01+0.01, -0.01-0.01],  # d-wave + py
+    [0.01, 0.01, 0.01, 0.01],  # s-wave
+    [0.01+0.01, 0.01-0.01, 0.01, 0.01],  # s-wave + px
+    [0.01, 0.01, 0.01+0.01, 0.01-0.01]  # s-wave + py
 ], dtype=np.complex128)
 seed_strings = [
     "normal state",
@@ -34,16 +34,16 @@ mu_arr = np.concatenate([
             np.linspace(0.55, 1.5, 25),
             np.linspace(1.55, 4.5, 35)
         ])  # length 67
-T_arr = np.linspace(0.001, 0.3, 40)
+T_arr = np.linspace(0.001, 0.45, 40)
 
 free_tol = 0.01
 
 t = 1
-V = 1.5
+V = 2
 Nx, Ny = 100, 100
 
-atol = 1e-8
-rtol = 1e-5
+atol = 1e-6
+rtol = 1e-3
 maxiter = 5000
 
 full_data = []

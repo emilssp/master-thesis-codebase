@@ -11,14 +11,14 @@ from phase_utils import flatten_df
 initial_seeds_uu = np.array([
     [0, 0, 0, 0],
 
-    [0.1, -0.1, 0.1, -0.1],
-    [0.1, -0.1, 0.1j, -0.1j],
+    [0.01, -0.01, 0.01, -0.01],
+    [0.01, -0.01, 0.01j, -0.01j],
 
     [0, 0, 0, 0],
     [0, 0, 0, 0],
 
-    [0.1, -0.1, 0.1, -0.1],
-    [0.1, -0.1, 0.1j, -0.1j]
+    [0.01, -0.01, 0.01, -0.01],
+    [0.01, -0.01, 0.01j, -0.01j]
 ], dtype=np.complex128)
 
 initial_seeds_dd = np.array([
@@ -27,11 +27,11 @@ initial_seeds_dd = np.array([
     [0, 0, 0, 0],
     [0, 0, 0, 0],
 
-    [0.1, -0.1, 0.1, -0.1],
-    [0.1, -0.1, 0.1j, -0.1j],
+    [0.01, -0.01, 0.01, -0.01],
+    [0.01, -0.01, 0.01j, -0.01j],
 
-    [0.1, -0.1, 0.1, -0.1],
-    [0.1, -0.1, 0.1j, -0.1j],
+    [0.01, -0.01, 0.01, -0.01],
+    [0.01, -0.01, 0.01j, -0.01j],
 ], dtype=np.complex128)
 
 seed_strings = [
@@ -41,18 +41,18 @@ seed_strings = [
     "uu+dd:px+py", "uu+dd:px+ipy",
 ]
 
-mu_arr = np.linspace(-4.0, 4.0, 48)
-T_arr = np.linspace(0.001, 0.1, 25)
+mu_arr = np.linspace(-3.5, 3.5, 42)
+T_arr = np.linspace(0.001, 0.25, 62)
 
-free_tol = 0.005
+free_tol = 0.01
 
 t = 1
-V = 1.5
+V = 2
 Nx, Ny = 100, 100
 
 atol = 1e-6
-rtol = 1e-4
-maxiter = 3000
+rtol = 1e-3
+maxiter = 5000
 
 rows = []
 
@@ -139,11 +139,11 @@ def main():
     df_flat = flatten_df(df)
 
     file_idx = idx
-    os.makedirs("data/muT_V15_prime", exist_ok=True)
-    os.makedirs("data/muT_V15_prime/raw", exist_ok=True)
+    os.makedirs("data/muT_V2_prime", exist_ok=True)
+    os.makedirs("data/muT_V2_prime/raw", exist_ok=True)
 
-    df_flat.to_json(f"data/muT_V15_prime/results_{file_idx:04d}.json")
-    df_raw.to_json(f"data/muT_V15_prime/raw/results_{file_idx:04d}.json")
+    df_flat.to_json(f"data/muT_V2_prime/results_{file_idx:04d}.json")
+    df_raw.to_json(f"data/muT_V2_prime/raw/results_{file_idx:04d}.json")
 
 
 if __name__ == "__main__":

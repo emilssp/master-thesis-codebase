@@ -10,9 +10,9 @@ from phase_utils import flatten_df
 
 initial_seeds = np.array([
     [0, 0, 0, 0],  # normal state
-    [0.1, 0.1, -0.1, -0.1],  # d-wave
-    [0.1+0.1, 0.1-0.1, -0.1, -0.1],  # d-wave + px
-    [0.1, 0.1, -0.1+0.1, -0.1-0.1],  # d-wave + py
+    [0.01, 0.01, -0.01, -0.01],  # d-wave
+    [0.01+0.01, 0.01-0.01, -0.01, -0.01],  # d-wave + px
+    [0.01, 0.01, -0.01+0.01, -0.01-0.01],  # d-wave + py
 ], dtype=np.complex128)
 
 seed_strings = [
@@ -21,13 +21,13 @@ seed_strings = [
 ]
 
 mu_arr = np.linspace(0.001, 0.6, 10)
-T_arr = np.linspace(0.001, 0.3, 50)
+T_arr = np.linspace(0.001, 0.5, 50)
 
 free_tol = 0.1
 
 t = 1
-V = 1.5
-Nx, Ny = 75, 75
+V = 2
+Nx, Ny = 100, 100
 
 atol = 1e-6
 rtol = 1e-3
@@ -100,8 +100,8 @@ def main():
     df_flat = flatten_df(df)
 
     file_idx = idx+100
-    os.makedirs("data/muT_V15", exist_ok=True)
-    df_flat.to_json(f"data/muT_V15/results_{file_idx:04d}.json")
+    os.makedirs("data/muT_V2", exist_ok=True)
+    df_flat.to_json(f"data/muT_V2/results_{file_idx:04d}.json")
 
 
 if __name__ == "__main__":

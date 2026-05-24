@@ -11,14 +11,14 @@ from phase_utils import flatten_df
 initial_seeds_uu = np.array([
     [0, 0, 0, 0],
 
-    [0.1, -0.1, 0.1, -0.1],
-    [0.1, -0.1, 0.1j, -0.1j],
+    [0.01, -0.01, 0.01, -0.01],
+    [0.01, -0.01, 0.01j, -0.01j],
 
     [0, 0, 0, 0],
     [0, 0, 0, 0],
 
-    [0.1, -0.1, 0.1, -0.1],
-    [0.1, -0.1, 0.1j, -0.1j]
+    [0.01, -0.01, 0.01, -0.01],
+    [0.01, -0.01, 0.01j, -0.01j]
 ], dtype=np.complex128)
 
 initial_seeds_dd = np.array([
@@ -27,11 +27,11 @@ initial_seeds_dd = np.array([
     [0, 0, 0, 0],
     [0, 0, 0, 0],
 
-    [0.1, -0.1, 0.1, -0.1],
-    [0.1, -0.1, 0.1j, -0.1j],
+    [0.01, -0.01, 0.01, -0.01],
+    [0.01, -0.01, 0.01j, -0.01j],
 
-    [0.1, -0.1, 0.1, -0.1],
-    [0.1, -0.1, 0.1j, -0.1j],
+    [0.01, -0.01, 0.01, -0.01],
+    [0.01, -0.01, 0.01j, -0.01j],
 ], dtype=np.complex128)
 
 seed_strings = [
@@ -42,16 +42,15 @@ seed_strings = [
 ]
 
 mu_arr = np.linspace(-4.0, 4.0, 48)
-T_arr = np.linspace(0.001, 0.1, 25)
-
-free_tol = 0.005
+T_arr = np.linspace(0.001, 0.2, 50)
+free_tol = 0.01
 
 t = 1
-V = 1.5
+V = 2
 Nx, Ny = 100, 100
 
 atol = 1e-6
-rtol = 1e-4
+rtol = 1e-3
 maxiter = 3000
 
 rows = []
@@ -140,7 +139,7 @@ def main():
     df_flat = flatten_df(df)
 
     file_idx = idx
-    main_path = "data/muT_V15_prime_BField"
+    main_path = "data/muT_V2_prime_BField"
     os.makedirs(main_path, exist_ok=True)
     os.makedirs(f"{main_path}/raw", exist_ok=True)
 

@@ -10,13 +10,13 @@ from phase_utils import flatten_df
 
 initial_seeds = np.array([
     [0, 0, 0, 0],  # normal state
-    [0.1, -0.1, 0, 0],  # px
-    [0, 0, 0.1, -0.1],  # py
-    [0.1, -0.1, 0.1, -0.1],  # px + py
-    [0.1, -0.1, 0.1j, -0.1j],  # px + i*py
-    [0.1, 0.1, -0.1, -0.1],  # d-wave
-    [0.1+0.1, 0.1-0.1, -0.1, -0.1],  # d-wave + px
-    [0.1, 0.1, -0.1+0.1, -0.1-0.1],  # d-wave + py
+    [0.01, -0.01, 0, 0],  # px
+    [0, 0, 0.01, -0.01],  # py
+    [0.01, -0.01, 0.01, -0.01],  # px + py
+    [0.01, -0.01, 0.01j, -0.01j],  # px + i*py
+    [0.01, 0.01, -0.01, -0.01],  # d-wave
+    [0.01+0.01, 0.01-0.01, -0.01, -0.01],  # d-wave + px
+    [0.01, 0.01, -0.01+0.01, -0.01-0.01],  # d-wave + py
 ], dtype=np.complex128)
 
 seed_strings = [
@@ -26,13 +26,13 @@ seed_strings = [
 ]
 
 mu_arr = np.linspace(0.61, 1.3, 30)
-T_arr = np.linspace(0.001, 0.3, 34)
+T_arr = np.linspace(0.001, 0.5, 50)
 
 free_tol = 0.1
 
 t = 1
-V = 1.5
-Nx, Ny = 75, 75
+V = 2
+Nx, Ny = 100, 100
 
 atol = 1e-6
 rtol = 1e-3

@@ -13,7 +13,7 @@ export OPENBLAS_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 
 source ~/D1/venv/bin/activate
 
-mkdir -p logs data data/muT_V15_bulk
+mkdir -p logs data data/muT_V2_bulk
 
 which python
 python --version
