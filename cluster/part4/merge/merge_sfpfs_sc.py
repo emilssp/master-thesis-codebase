@@ -1,7 +1,7 @@
 import glob
 import numpy as np
 
-files = sorted(glob.glob("data/DFP_hx_mult/temp_*.npz"))
+files = sorted(glob.glob("data/SFPFS_sc/temp_*.npz"))
 print("Start merging.")
 rows = []
 for f in files:
@@ -36,7 +36,7 @@ Fdd_px_arr = np.array([r[10] for r in rows])
 Fdd_py_arr = np.array([r[11] for r in rows])
 
 np.savez(
-    "data/DFP_hx_mult.npz",
+    "data/SFPFS_sc.npz",
     temps=temps,
     converged=converged,
     F0=F0_arr,
