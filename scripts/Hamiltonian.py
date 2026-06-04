@@ -62,9 +62,9 @@ class Hamiltonian:
         self.F0 = np.zeros(Nx, dtype=np.complex128)
         self.F0[np.where(U != 0)] = F0_init
         self.F_xplus = np.zeros(Nx-1, dtype=np.complex128)
-        self.F_xplus[np.where(V[1:] != 0)] = F_init[0]
+        self.F_xplus[np.where(V[:-1] != 0)] = F_init[0]
         self.F_xmin = np.zeros(Nx-1, dtype=np.complex128)
-        self.F_xmin[np.where(V[:-1] != 0)] = F_init[1]
+        self.F_xmin[np.where(V[1:] != 0)] = F_init[1]
         self.F_yplus = np.zeros(Nx, dtype=np.complex128)
         self.F_yplus[np.where(V != 0)] = F_init[2]
         self.F_ymin = np.zeros(Nx, dtype=np.complex128)
@@ -111,7 +111,7 @@ class Hamiltonian:
 
     def build_H_kindep(self):
         gap0 = self.U * self.F0
-        gap1 = self.V[:-1] * self.F_xmin
+        gap1 = self.V[1:] * self.F_xmin
         gap2 = self.V[:-1] * self.F_xplus
 
         gap1_uu = self.V_prime[1:] * self.Fuu_xmin
@@ -295,7 +295,7 @@ class Hamiltonian:
     def free_energy(self, temperature=0):
         '''Calculates free energy and set it in H'''
         Ny = self.lattice.Y
-        ky_list = np.linspace(PI / Ny, PI, Ny)
+        ky_list = np.linspace(PI / Ny, PI, Ny//2)
 
         H_kindep = self.build_H_kindep()
         H_k0 = self.build_H_k0()
@@ -352,7 +352,7 @@ class Hamiltonian:
 
     def dos(self, energies, eta):
         Ny = self.lattice.Y
-        ky_list = np.linspace(PI/Ny, PI, Ny, endpoint=False)
+        ky_list = np.linspace(PI/Ny, PI, Ny//2, endpoint=False)
 
         H_kindep = self.build_H_kindep()
         H_k0 = self.build_H_k0()
@@ -384,21 +384,98 @@ class Hamiltonian:
 
         dos += np.sum(parts, axis=0)
         return dos
+    
+    def dos_local(self, energies, eta, interface_width=5):
+        Nx = self.lattice.X
+        Ny = self.lattice.Y
 
-        # def work(k):
+        ky_list = np.linspace(PI / Ny, PI, Ny//2, endpoint=False)
 
-        #     H_k = self.build_H_k(k)
-        #     eps = la.eigvalsh(H_kindep + H_k)
+        site_ids = np.arange(Nx)
 
-        #     internal_energy = - 0.5 * np.sum(eps)
+        interface_mask = (
+            (site_ids < interface_width)
+            | (site_ids >= Nx - interface_width)
+        )
 
-        #     if temperature == 0:
-        #         S = 0
-        #     else:
-        #         beta = 1/temperature
-        #         S = np.sum(special.softplus(-eps*beta))/beta
+        bulk_mask = ~interface_mask
 
-        #     return internal_energy - S
+        H_kindep = self.build_H_kindep()
+        H_k0 = self.build_H_k0()
 
-        # with ThreadPoolExecutor(max_workers=os.cpu_count()) as ex:
-        #     parts = list(ex.map(work, ky_list))
+        def local_dos_from_eigensystem(eigval, eigvec):
+            u_up = eigvec[0::4, :]
+            u_dn = eigvec[1::4, :]
+            v_up = eigvec[2::4, :]
+            v_dn = eigvec[3::4, :]
+
+            w_pos_interface = np.sum(
+                np.abs(u_up[interface_mask, :])**2
+                + np.abs(u_dn[interface_mask, :])**2,
+                axis=0
+            )
+
+            w_neg_interface = np.sum(
+                np.abs(v_up[interface_mask, :])**2
+                + np.abs(v_dn[interface_mask, :])**2,
+                axis=0
+            )
+
+            w_pos_bulk = np.sum(
+                np.abs(u_up[bulk_mask, :])**2
+                + np.abs(u_dn[bulk_mask, :])**2,
+                axis=0
+            )
+
+            w_neg_bulk = np.sum(
+                np.abs(v_up[bulk_mask, :])**2
+                + np.abs(v_dn[bulk_mask, :])**2,
+                axis=0
+            )
+
+            Lp = lorentzian(energies[:, None] - eigval[None, :], eta=eta)
+            Ln = lorentzian(energies[:, None] + eigval[None, :], eta=eta)
+
+            dos_interface = (
+                np.einsum("nm,m->n", Lp, w_pos_interface)
+                + np.einsum("nm,m->n", Ln, w_neg_interface)
+            )
+
+            dos_bulk = (
+                np.einsum("nm,m->n", Lp, w_pos_bulk)
+                + np.einsum("nm,m->n", Ln, w_neg_bulk)
+            )
+
+            return dos_interface, dos_bulk
+
+        eigval0, eigvec0 = la.eigh(
+            H_kindep + H_k0,
+            subset_by_value=(0, np.inf)
+        )
+
+        dos_interface, dos_bulk = local_dos_from_eigensystem(eigval0, eigvec0)
+
+        def work(k):
+            H2 = H_kindep + self.build_H_k(k)
+            eigval, eigvec = la.eigh(H2)
+            return local_dos_from_eigensystem(eigval, eigvec)
+
+        with ThreadPoolExecutor(max_workers=os.cpu_count()) as ex:
+            parts = list(ex.map(work, ky_list))
+
+        for d_interface, d_bulk in parts:
+            dos_interface += d_interface
+            dos_bulk += d_bulk
+
+        return dos_interface, dos_bulk
+
+    def spectrum_for_state(self):
+        Nx = self.lattice.X
+        Ny = self.lattice.Y
+        ky_vals = np.linspace(0, 2 * np.pi, Ny)
+        eigvals = np.zeros((Ny, 4*Nx))
+        for idx, ky in enumerate(ky_vals):
+            H = self.build_H_kindep() + self.build_H_k(ky)
+            w = la.eigvalsh(H)
+            eigvals[idx, :] = np.sort(w)
+        return ky_vals, eigvals
