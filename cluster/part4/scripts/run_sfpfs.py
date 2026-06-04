@@ -69,7 +69,7 @@ def main():
                 hx=h)
 
     fixed_sites = (V_prime == 0)
-    fixed_syms = ["F_xplus", "F_xmin", "F_yplus", "F_ymin"]
+    fixed_syms = ["F0"]
     partial_sc(H, temperature=temp,
             fixed_sites=fixed_sites,
             fixed_syms=fixed_syms,
