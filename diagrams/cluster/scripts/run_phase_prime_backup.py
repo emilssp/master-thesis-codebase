@@ -48,12 +48,12 @@ seed_strings = [
 ]
 
 mu_arr = np.linspace(-4.0, 4.0, 48)
-T_arr = np.linspace(0.001, 0.1, 25)
+T_arr = np.linspace(0.001, 0.2, 50)
 
 free_tol = 0.005
 
 t = 1
-V = 3.0
+V = 2.0
 Nx, Ny = 100, 100
 
 atol = 1e-8
@@ -145,11 +145,11 @@ def main():
     df_flat = flatten_df(df)
 
     file_idx = idx
-    os.makedirs("data/muT_V15_prime", exist_ok=True)
-    os.makedirs("data/muT_V15_prime/raw", exist_ok=True)
+    os.makedirs("data/muT_V2_prime", exist_ok=True)
+    os.makedirs("data/muT_V2_prime/raw", exist_ok=True)
 
-    df_flat.to_json(f"data/muT_V15_prime/results_{file_idx:04d}.json")
-    df_raw.to_json(f"data/muT_V15_prime/raw/results_{file_idx:04d}.json")
+    df_flat.to_json(f"data/muT_V2_prime/results_{file_idx:04d}.json")
+    df_raw.to_json(f"data/muT_V2_prime/raw/results_{file_idx:04d}.json")
 
 
 if __name__ == "__main__":

@@ -36,7 +36,6 @@ class Hamiltonian:
         Nx = lattice.X
         self.dim = 4 * Nx
         self.free = 0
-        self.converged = False
 
         if U is None:
             U = np.zeros(Nx)
@@ -63,9 +62,9 @@ class Hamiltonian:
         self.F0 = np.zeros(Nx, dtype=np.complex128)
         self.F0[np.where(U != 0)] = F0_init
         self.F_xplus = np.zeros(Nx-1, dtype=np.complex128)
-        self.F_xplus[np.where(V[1:] != 0)] = F_init[0]
+        self.F_xplus[np.where(V[:-1] != 0)] = F_init[0]
         self.F_xmin = np.zeros(Nx-1, dtype=np.complex128)
-        self.F_xmin[np.where(V[:-1] != 0)] = F_init[1]
+        self.F_xmin[np.where(V[1:] != 0)] = F_init[1]
         self.F_yplus = np.zeros(Nx, dtype=np.complex128)
         self.F_yplus[np.where(V != 0)] = F_init[2]
         self.F_ymin = np.zeros(Nx, dtype=np.complex128)
@@ -270,14 +269,16 @@ class Hamiltonian:
 
     def free_energy_const_term(self):
 
+        Ny = self.lattice.Y
+
         E_S = 0
 
         E_S += np.sum(self.U * np.abs(self.F0)**2)
 
-        E_S += np.sum(self.V * np.abs(np.r_[0, self.F_xplus])**2)
-        E_S += np.sum(self.V * np.abs(np.r_[self.F_xmin, 0])**2)
-        E_S += np.sum(self.V * np.abs(self.F_yplus)**2)
-        E_S += np.sum(self.V * np.abs(self.F_ymin)**2)
+        E_S += np.sum(self.V * np.abs(np.r_[0, self.F_xplus])**2) * Ny
+        E_S += np.sum(self.V * np.abs(np.r_[self.F_xmin, 0])**2) * Ny
+        E_S += np.sum(self.V * np.abs(self.F_yplus)**2) * Ny
+        E_S += np.sum(self.V * np.abs(self.F_ymin)**2) * Ny
 
         E_S += np.sum(self.V_prime * np.abs(np.r_[0, self.Fuu_xplus])**2)
         E_S += np.sum(self.V_prime * np.abs(np.r_[self.Fuu_xmin, 0])**2)
@@ -294,7 +295,7 @@ class Hamiltonian:
     def free_energy(self, temperature=0):
         '''Calculates free energy and set it in H'''
         Ny = self.lattice.Y
-        ky_list = np.linspace(PI / Ny, PI, Ny)
+        ky_list = np.linspace(PI / Ny, PI, Ny//2)
 
         H_kindep = self.build_H_kindep()
         H_k0 = self.build_H_k0()
@@ -323,7 +324,7 @@ class Hamiltonian:
 
         E_S = self.free_energy_const_term()
 
-        free = free - E_S
+        free = free + E_S
         self.free = free
         return free
 
@@ -351,7 +352,7 @@ class Hamiltonian:
 
     def dos(self, energies, eta):
         Ny = self.lattice.Y
-        ky_list = np.linspace(PI/Ny, PI, Ny, endpoint=False)
+        ky_list = np.linspace(PI/Ny, PI, Ny//2, endpoint=False)
 
         H_kindep = self.build_H_kindep()
         H_k0 = self.build_H_k0()
@@ -383,86 +384,90 @@ class Hamiltonian:
 
         dos += np.sum(parts, axis=0)
         return dos
-
-    def dos_spin_resolved_k(self, energies, eta, H_kindep, k):
-
-        H_k = self.build_H_k(k)
-        H2 = H_kindep + H_k
-
-        eigval, eigvec = la.eigh(H2)
-
-        u_up = eigvec[0::4, :]  # electron ↑
-        u_dn = eigvec[1::4, :]  # electron ↓
-        v_up = eigvec[2::4, :]  # hole ↑
-        v_dn = eigvec[3::4, :]  # hole ↓
-
-        up_pos = np.sum(np.abs(u_up)**2, axis=0)  # (M,)
-        dn_pos = np.sum(np.abs(u_dn)**2, axis=0)
-        up_neg = np.sum(np.abs(v_up)**2, axis=0)
-        dn_neg = np.sum(np.abs(v_dn)**2, axis=0)
-
-        Lp = lorentzian(energies[:, None] - eigval[None, :], eta=eta)
-        Ln = lorentzian(energies[:, None] + eigval[None, :], eta=eta)
-
-        # Spin-resolved DOS
-        dos_up = (
-            np.einsum('nm,m->n', Lp, up_pos)
-            + np.einsum('nm,m->n', Ln, up_neg)
-        )
-        dos_dn = (
-            np.einsum('nm,m->n', Lp, dn_pos)
-            + np.einsum('nm,m->n', Ln, dn_neg)
-        )
-
-        return dos_up, dos_dn
-
-    def dos_spin_resolved(self, energies, eta):
+    
+    def dos_local(self, energies, eta, interface_width=5):
+        Nx = self.lattice.X
         Ny = self.lattice.Y
-        ky_list = np.linspace(PI / Ny, PI, Ny, endpoint=False)
+
+        ky_list = np.linspace(PI / Ny, PI, Ny//2, endpoint=False)
+
+        site_ids = np.arange(Nx)
+
+        interface_mask = (
+            (site_ids < interface_width)
+            | (site_ids >= Nx - interface_width)
+        )
+
+        bulk_mask = ~interface_mask
 
         H_kindep = self.build_H_kindep()
         H_k0 = self.build_H_k0()
+
+        def local_dos_from_eigensystem(eigval, eigvec):
+            u_up = eigvec[0::4, :]
+            u_dn = eigvec[1::4, :]
+            v_up = eigvec[2::4, :]
+            v_dn = eigvec[3::4, :]
+
+            w_pos_interface = np.sum(
+                np.abs(u_up[interface_mask, :])**2
+                + np.abs(u_dn[interface_mask, :])**2,
+                axis=0
+            )
+
+            w_neg_interface = np.sum(
+                np.abs(v_up[interface_mask, :])**2
+                + np.abs(v_dn[interface_mask, :])**2,
+                axis=0
+            )
+
+            w_pos_bulk = np.sum(
+                np.abs(u_up[bulk_mask, :])**2
+                + np.abs(u_dn[bulk_mask, :])**2,
+                axis=0
+            )
+
+            w_neg_bulk = np.sum(
+                np.abs(v_up[bulk_mask, :])**2
+                + np.abs(v_dn[bulk_mask, :])**2,
+                axis=0
+            )
+
+            Lp = lorentzian(energies[:, None] - eigval[None, :], eta=eta)
+            Ln = lorentzian(energies[:, None] + eigval[None, :], eta=eta)
+
+            dos_interface = (
+                np.einsum("nm,m->n", Lp, w_pos_interface)
+                + np.einsum("nm,m->n", Ln, w_neg_interface)
+            )
+
+            dos_bulk = (
+                np.einsum("nm,m->n", Lp, w_pos_bulk)
+                + np.einsum("nm,m->n", Ln, w_neg_bulk)
+            )
+
+            return dos_interface, dos_bulk
 
         eigval0, eigvec0 = la.eigh(
             H_kindep + H_k0,
             subset_by_value=(0, np.inf)
         )
 
-        # Basis: (e↑, e↓, h↑, h↓)
-        u_up0 = eigvec0[0::4, :]
-        u_dn0 = eigvec0[1::4, :]
-        v_up0 = eigvec0[2::4, :]
-        v_dn0 = eigvec0[3::4, :]
-
-        # Spin-resolved weights for k=0 sector
-        w_e_up0 = np.sum(np.abs(u_up0)**2, axis=0)
-        w_e_dn0 = np.sum(np.abs(u_dn0)**2, axis=0)
-        w_h_up0 = np.sum(np.abs(v_up0)**2, axis=0)
-        w_h_dn0 = np.sum(np.abs(v_dn0)**2, axis=0)
-
-        Lp0 = lorentzian(energies[:, None] - eigval0[None, :], eta=eta)
-        Ln0 = lorentzian(energies[:, None] + eigval0[None, :], eta=eta)
-
-        dos_up = (
-            np.einsum('nm,m->n', Lp0, w_e_up0)
-            + np.einsum('nm,m->n', Ln0, w_h_up0)
-        )
-        dos_dn = (
-            np.einsum('nm,m->n', Lp0, w_e_dn0)
-            + np.einsum('nm,m->n', Ln0, w_h_dn0)
-        )
+        dos_interface, dos_bulk = local_dos_from_eigensystem(eigval0, eigvec0)
 
         def work(k):
-            return self.dos_spin_resolved_k(energies, eta, H_kindep, k)
+            H2 = H_kindep + self.build_H_k(k)
+            eigval, eigvec = la.eigh(H2)
+            return local_dos_from_eigensystem(eigval, eigvec)
 
         with ThreadPoolExecutor(max_workers=os.cpu_count()) as ex:
             parts = list(ex.map(work, ky_list))
 
-        # parts is a list of tuples: [(dos_up(k1), dos_dn(k1)), ...]
-        dos_up += np.sum([p[0] for p in parts], axis=0)
-        dos_dn += np.sum([p[1] for p in parts], axis=0)
+        for d_interface, d_bulk in parts:
+            dos_interface += d_interface
+            dos_bulk += d_bulk
 
-        return dos_up, dos_dn
+        return dos_interface, dos_bulk
 
     def spectrum_for_state(self):
         Nx = self.lattice.X

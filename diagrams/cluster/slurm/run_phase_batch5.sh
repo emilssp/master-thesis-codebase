@@ -5,7 +5,7 @@
 #SBATCH --array=0-24
 #SBATCH --cpus-per-task=6
 #SBATCH --time=48:00:00
-#SBATCH --partition=habanaq
+#SBATCH --partition=fpgaq
 
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 export MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK}
@@ -13,7 +13,7 @@ export OPENBLAS_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 
 source ~/D1/venv/bin/activate
 
-mkdir -p logs data data/muT_V15
+mkdir -p logs data data/muT_V2
 
 which python
 python --version
