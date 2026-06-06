@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.special import expit
 
-from constants import PI
+from .constants import PI
 
 
 def sl(i_site: int, comp: int) -> int:
