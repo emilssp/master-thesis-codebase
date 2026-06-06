@@ -468,7 +468,61 @@ class Hamiltonian:
             dos_bulk += d_bulk
 
         return dos_interface, dos_bulk
+    
+    def dos_spin_resolved(self, energies, eta):
+        Ny = self.lattice.Y
+        ky_list = np.linspace(PI / Ny, PI, Ny // 2, endpoint=False)
 
+        H_kindep = self.build_H_kindep()
+        H_k0 = self.build_H_k0()
+
+        def spin_dos_from_eigensystem(eigval, eigvec):
+            u_up = eigvec[0::4, :]
+            u_dn = eigvec[1::4, :]
+            v_up = eigvec[2::4, :]
+            v_dn = eigvec[3::4, :]
+
+            w_pos_up = np.sum(np.abs(u_up)**2, axis=0)
+            w_neg_up = np.sum(np.abs(v_up)**2, axis=0)
+
+            w_pos_dn = np.sum(np.abs(u_dn)**2, axis=0)
+            w_neg_dn = np.sum(np.abs(v_dn)**2, axis=0)
+
+            Lp = lorentzian(energies[:, None] - eigval[None, :], eta=eta)
+            Ln = lorentzian(energies[:, None] + eigval[None, :], eta=eta)
+
+            dos_up = (
+                np.einsum("nm,m->n", Lp, w_pos_up)
+                + np.einsum("nm,m->n", Ln, w_neg_up)
+            )
+            dos_dn = (
+                np.einsum("nm,m->n", Lp, w_pos_dn)
+                + np.einsum("nm,m->n", Ln, w_neg_dn)
+            )
+
+            return dos_up, dos_dn
+
+        eigval0, eigvec0 = la.eigh(
+            H_kindep + H_k0,
+            subset_by_value=(0, np.inf)
+        )
+
+        dos_up, dos_dn = spin_dos_from_eigensystem(eigval0, eigvec0)
+
+        def work(k):
+            H2 = H_kindep + self.build_H_k(k)
+            eigval, eigvec = la.eigh(H2)
+            return spin_dos_from_eigensystem(eigval, eigvec)
+
+        with ThreadPoolExecutor(max_workers=os.cpu_count()) as ex:
+            parts = list(ex.map(work, ky_list))
+
+        for d_up, d_dn in parts:
+            dos_up += d_up
+            dos_dn += d_dn
+
+        return dos_up, dos_dn
+    
     def spectrum_for_state(self):
         Nx = self.lattice.X
         Ny = self.lattice.Y
