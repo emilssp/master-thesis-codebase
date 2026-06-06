@@ -20,13 +20,13 @@ Corr = namedtuple(
 
 
 def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
-           atol=1e-6, rtol=1e-4, maxiter=100,
-           verbose=False):
+           atol=1e-6, rtol=1e-3, maxiter=100,
+           mixing=1.0, verbose=False):
 
     converged = False
     Ny = H.lattice.Y
     Nx = H.lattice.X
-    ky_list = np.linspace(PI / Ny, PI, Ny, endpoint=True)
+    ky_list = np.linspace(PI / Ny, PI, Ny//2, endpoint=True)
 
     F0 = H.F0.copy()
     F_xplus = H.F_xplus.copy()
@@ -142,15 +142,6 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             np.einsum('nm,nm,nm->n', u_dn0, np.conj(v_dn0), f_E0)
         ) / Ny
 
-        # Singlet / triplet symmetry parts
-        FS_x = (Fx0_ux1 + Fx0_ux2 + Fx0_vw1 + Fx0_vw2).conj() / (2.0 * Ny)
-        FS_y = F0_new.copy()
-
-        FT_x_plus = (Fx0_ux1 - Fx0_ux2 + Fx0_vw2 - Fx0_vw1).conj() / (2.0 * Ny)
-        FT_x_min = (Fx0_ux2 - Fx0_ux1 + Fx0_vw1 - Fx0_vw2).conj() / (2.0 * Ny)
-        FT_y_plus = np.zeros(Nx, dtype=np.complex128)
-        FT_y_min = np.zeros(Nx, dtype=np.complex128)
-
         for ky in ky_list:
             H_k = H.build_H_k(ky)
             H2 = H_kindep + H_k
@@ -250,35 +241,23 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
             F_yplus_new += (F_ux * ep + F_vw * em) / Ny
             F_ymin_new += (F_ux * em + F_vw * ep) / Ny
 
-            # Singlet component
-            FS_x += (Fx_ux1 + Fx_ux2 + Fx_vw1 + Fx_vw2) / (2.0 * Ny)
-            FS_y += (F_ux + F_vw) * np.cos(ky) / Ny
-
-            # Triplet component
-            FT_x_plus += (Fx_ux1 + Fx_vw2 - Fx_ux2 - Fx_vw1) / (2.0 * Ny)
-            FT_x_min += (Fx_ux2 - Fx_ux1 + Fx_vw1 - Fx_vw2) / (2.0 * Ny)
-
-            FT_y_plus += 1j * (F_ux - F_vw) * np.sin(ky) / Ny
-            FT_y_min -= 1j * (F_ux - F_vw) * np.sin(ky) / Ny
-
-        # Filtering out s, d, px, py (same algebra as MATLAB)
-        F_swave = (np.r_[0, FS_x] + np.r_[FS_x, 0] + 2.0 * FS_y) / 4.0
-        F_dwave = (np.r_[0, FS_x] + np.r_[FS_x, 0] - 2.0 * FS_y) / 4.0
-        F_px = (np.r_[0, FT_x_plus] - np.r_[FT_x_min, 0]) / 2.0
-        F_py = (FT_y_plus - FT_y_min) / 2.0
-
         corr = Corr(
             F0,
             F_xplus, F_xmin, F_yplus, F_ymin,
             Fuu_xplus, Fuu_xmin, Fuu_yplus, Fuu_ymin,
             Fdd_xplus, Fdd_xmin, Fdd_yplus, Fdd_ymin,
         )
-        corr_new = Corr(
+        corr_raw = Corr(
             F0_new,
             F_xplus_new, F_xmin_new, F_yplus_new, F_ymin_new,
             Fuu_xplus_new, Fuu_xmin_new, Fuu_yplus_new, Fuu_ymin_new,
             Fdd_xplus_new, Fdd_xmin_new, Fdd_yplus_new, Fdd_ymin_new
         )
+
+        corr_new = Corr(*[
+            (1.0 - mixing) * old + mixing * new
+            for old, new in zip(corr, corr_raw)
+        ])
 
         if verbose:
             print('============================================')
@@ -299,22 +278,12 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
                 print(f"Average: {np.mean(corr_new[idx])}")
             print(f"Iteration {iteration + 1}.")
 
-        F0 = F0_new.copy()
-
-        F_xplus = F_xplus_new.copy()
-        F_xmin = F_xmin_new.copy()
-        F_yplus = F_yplus_new.copy()
-        F_ymin = F_ymin_new.copy()
-
-        Fuu_xplus = Fuu_xplus_new.copy()
-        Fuu_xmin = Fuu_xmin_new.copy()
-        Fuu_yplus = Fuu_yplus_new.copy()
-        Fuu_ymin = Fuu_ymin_new.copy()
-
-        Fdd_xplus = Fdd_xplus_new.copy()
-        Fdd_xmin = Fdd_xmin_new.copy()
-        Fdd_yplus = Fdd_yplus_new.copy()
-        Fdd_ymin = Fdd_ymin_new.copy()
+        (
+            F0,
+            F_xplus, F_xmin, F_yplus, F_ymin,
+            Fuu_xplus, Fuu_xmin, Fuu_yplus, Fuu_ymin,
+            Fdd_xplus, Fdd_xmin, Fdd_yplus, Fdd_ymin,
+        ) = corr_new
 
         H.set_correlations(corr_new)
         if is_converged(corr, corr_new, atol, rtol):
@@ -331,4 +300,4 @@ def bdg_sc(H: Hamiltonian, temperature,  # Hamiltonian
         print(f"WARNING: Failed to converge after {iteration+1} iterations")
         print("==================================================")
 
-    return F_swave, F_dwave, F_px, F_py
+    H.converged = converged
