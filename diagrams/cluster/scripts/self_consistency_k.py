@@ -3,7 +3,7 @@ import scipy.linalg as la
 from scipy import special
 from collections import namedtuple
 
-from utils import fermi_dirac, is_converged, is_hermitian
+from .utils import fermi_dirac, is_converged, is_hermitian
 
 PI = np.pi
 

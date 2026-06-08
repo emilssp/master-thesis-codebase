@@ -21,9 +21,7 @@ swave_arr = np.array([
 
 temps = np.concatenate([
     np.arange(0.001, 0.009 + 1e-12, 0.001),
-    np.arange(0.010, 0.080 + 1e-12, 0.01),
-    np.arange(0.0805, 0.1100 + 1e-12, 0.0005),
-    np.arange(0.115, 0.200 + 1e-12, 0.001),
+    np.arange(0.010, 0.50 + 1e-12, 0.01),
 ])  # 163 temps total
 
 
