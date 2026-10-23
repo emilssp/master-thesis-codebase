@@ -8,11 +8,9 @@ from utilsdir.partial_sc import partial_sc
 
 
 temps = np.concatenate([
-    np.arange(0.001, 0.009 + 1e-12, 0.001),
-    np.arange(0.010, 0.110 + 1e-12, 0.001),
-    np.arange(0.1105, 0.1500 + 1e-12, 0.0005),
-    np.arange(0.141, 0.200 + 1e-12, 0.001),
-])  # 250 temps total
+    np.arange(0.001, 0.1400 + 1e-12, 0.0005),
+    np.arange(0.145, 0.200 + 1e-12, 0.005),
+])  # 291 temps total
 
 
 def main():
@@ -43,15 +41,13 @@ def main():
     h[widthS:widthS + widthF] = h0
     h[widthS + widthF + widthP + widthF-1] = -h0
 
-    V = None
-
-    U0 = 1.5 * t
+    U0 = 1 * t
     U = U0 * np.ones(lattice.X)
     U[widthS:-widthS] = 0
     U[widthS-1] = U0/2
     U[-widthS] = U0/2
 
-    V_prime0 = 1.5 * t
+    V_prime0 = 0.92 * t
     V_prime = V_prime0 * np.ones(lattice.X)
     V_prime[:widthF+widthS] = 0
     V_prime[widthF+widthS+widthP:] = 0
@@ -64,13 +60,13 @@ def main():
 
     H = Hamiltonian(t, mu, lattice,
                     U=U, V_prime=V_prime,
-                    F_init=[0.3, 0.3, 0.3, 0.3],
-                    Fuu_init=[0.01, -0.01, 0.01j, -0.01j],
-                    Fdd_init=[0.01, -0.01, 0.01j, -0.01j],
+                    F0_init=0.011,
+                    Fuu_init=[0.001, -0.001, 0.001j, -0.001j],
+                    Fdd_init=[0.001, -0.001, 0.001j, -0.001j],
                     hx=h)
 
     fixed_sites = (V_prime == 0)
-    fixed_syms = ["F_xplus", "F_xmin", "F_yplus", "F_ymin"]
+    fixed_syms = ["F0"]
     partial_sc(H, temperature=temp,
             fixed_sites=fixed_sites,
             fixed_syms=fixed_syms,
@@ -80,9 +76,9 @@ def main():
     F0 = H.F0
     F, Fuu, Fdd = H.get_correlations()
 
-    os.makedirs("data/SFPFS", exist_ok=True)
+    os.makedirs("data/SFPFS_092", exist_ok=True)
     np.savez(
-        f"data/SFPFS/temp_{idx:04d}.npz",
+        f"data/SFPFS_092/temp_{idx:04d}.npz",
         idx=idx,
         temp=temp,
         converged=H.converged,
@@ -114,7 +110,7 @@ def main():
             "V_prime": V_prime0,
         }
 
-        param_file = f"data/SFPFS/params_{idx:04d}.txt"
+        param_file = f"data/SFPFS_092/params_{idx:04d}.txt"
         with open(param_file, "w") as f:
             for key, value in params.items():
                 f.write(f"{key} = {value}\n")

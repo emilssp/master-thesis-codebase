@@ -9,7 +9,6 @@ from phase_utils import flatten_df
 
 
 initial_seeds = np.array([
-    [0, 0, 0, 0],  # normal state
     [0.01, -0.01, 0.01j, -0.01j],  # px + i*py
 ], dtype=np.complex128)
 
@@ -18,7 +17,10 @@ seed_strings = [
     "px+i*py",
 ]
 
-T_arr = np.linspace(0.001, 0.2, 180)
+T_arr = np.concatenate([
+    np.arange(0.001, 0.1400 + 1e-12, 0.0005),
+    np.arange(0.145, 0.200 + 1e-12, 0.005),
+])  # 291 temps total
 
 free_tol = 0.1
 

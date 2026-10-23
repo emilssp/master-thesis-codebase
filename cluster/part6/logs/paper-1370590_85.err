@@ -1,0 +1,34 @@
+Traceback (most recent call last):
+  File "/home/emilssp/D1/venv/lib/python3.10/site-packages/numpy/lib/_npyio_impl.py", line 795, in _savez
+    with zipf.open(fname, 'w', force_zip64=True) as fid:
+  File "/usr/lib/python3.10/zipfile.py", line 1201, in close
+    self._fileobj.seek(self._zipfile.start_dir)
+OSError: [Errno 28] No space left on device
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/zipfile.py", line 1864, in close
+    self.fp.seek(self.start_dir)
+OSError: [Errno 28] No space left on device
+
+During handling of the above exception, another exception occurred:
+
+OSError: [Errno 28] No space left on device
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/global/D1/homes/emilssp/thesis/part6/./scripts/run_paper.py", line 131, in <module>
+    main()
+  File "/global/D1/homes/emilssp/thesis/part6/./scripts/run_paper.py", line 120, in main
+    np.savez(
+  File "/home/emilssp/D1/venv/lib/python3.10/site-packages/numpy/lib/_npyio_impl.py", line 683, in savez
+    _savez(file, args, kwds, False, allow_pickle=allow_pickle)
+  File "/home/emilssp/D1/venv/lib/python3.10/site-packages/numpy/lib/_npyio_impl.py", line 800, in _savez
+    zipf.close()
+  File "/usr/lib/python3.10/zipfile.py", line 1869, in close
+    self._fpclose(fp)
+  File "/usr/lib/python3.10/zipfile.py", line 1969, in _fpclose
+    fp.close()
+OSError: [Errno 28] No space left on device

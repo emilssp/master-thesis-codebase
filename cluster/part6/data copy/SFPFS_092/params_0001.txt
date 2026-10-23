@@ -1,0 +1,12 @@
+widthS = 10
+widthF = 1
+widthP = 40
+X = 62
+Y = 200
+muS = 1.2
+muF = 1.4
+muP = 1.8
+hx = 0.9
+U0 = 1
+V0 = 0
+V_prime = 0.92
